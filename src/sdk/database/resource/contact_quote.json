@@ -1,0 +1,173 @@
+{
+  "id": "102019c1341eb64763ab1be2109ef48dc96",
+  "version": "102019c80a6d48a7022815cfc71da79f2cc",
+  "schema": {
+    "name": "contact_quote",
+    "description": "Stores form submissions from customers requesting quotes for electrical services",
+    "fields": [
+      {
+        "name": "id",
+        "description": "Unique identifier for the quote request",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 1,
+          "reason": "Primary identifier"
+        }
+      },
+      {
+        "name": "data_creator",
+        "description": "id of the user who creates the record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 1,
+          "reason": "System field"
+        }
+      },
+      {
+        "name": "data_updater",
+        "description": "id of the user who updates the record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 1,
+          "reason": "System field"
+        }
+      },
+      {
+        "name": "create_time",
+        "description": "create time in timestamp unix",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 1,
+          "reason": "System field"
+        },
+        "format": "timestamp"
+      },
+      {
+        "name": "update_time",
+        "description": "update time in timestamp unix",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 1,
+          "reason": "System field"
+        },
+        "format": "timestamp"
+      },
+      {
+        "name": "name",
+        "description": "Name of the customer requesting the quote",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Customer personal information"
+        }
+      },
+      {
+        "name": "email",
+        "description": "Email address of the customer",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Customer contact information"
+        },
+        "format": "email"
+      },
+      {
+        "name": "phone",
+        "description": "Phone number of the customer",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Customer contact information"
+        }
+      },
+      {
+        "name": "service_type",
+        "description": "Type of electrical service requested",
+        "type": 100,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Business transaction detail"
+        },
+        "enumeration": [
+          {
+            "value": "Unspecified"
+          },
+          {
+            "number": 1,
+            "value": "DomesticElectrical"
+          },
+          {
+            "number": 2,
+            "value": "CommercialElectrical"
+          },
+          {
+            "number": 3,
+            "value": "EmergencyCallouts"
+          }
+        ]
+      },
+      {
+        "name": "message",
+        "description": "Detailed message regarding the quote request",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Customer input content"
+        }
+      }
+    ],
+    "indexes": [
+      {
+        "fields": [
+          "id"
+        ],
+        "unique": true,
+        "primary": true,
+        "order": false
+      },
+      {
+        "fields": [
+          "data_creator"
+        ],
+        "order": false
+      },
+      {
+        "fields": [
+          "data_updater"
+        ],
+        "order": false
+      },
+      {
+        "fields": [
+          "email"
+        ],
+        "order": false
+      },
+      {
+        "fields": [
+          "create_time"
+        ],
+        "order": true
+      },
+      {
+        "fields": [
+          "service_type"
+        ],
+        "order": false
+      }
+    ]
+  },
+  "task": {
+    "id": "6999c435355bd553adeffb6f",
+    "root": "697dc27eb1f12e575600d68f",
+    "project": "697dc27eb1f12e575600d68e",
+    "user": "b841e340-2001-7005-fde8-27c1f6ed0b84"
+  },
+  "namespace": {
+    "id": "01987547fc6c72ecb453bd2736bd4ea0",
+    "tenant": 2,
+    "name": "global-1",
+    "default": true
+  },
+  "revision": 1
+}

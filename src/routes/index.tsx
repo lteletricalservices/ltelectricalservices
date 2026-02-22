@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,9 +35,11 @@ import {
 	PawPrint,
 	Upload,
 	Trash2,
+	Loader2,
 } from "lucide-react";
 import { ContactQuoteORM, ContactQuoteServiceType, type ContactQuoteModel } from "@/sdk/database/orm/orm_contact_quote";
 import { useAdmin, E, EditableLink, EditableImage, EditableColor } from "@/lib/admin-context";
+import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 
 export const Route = createFileRoute("/")({
 	component: App,
@@ -645,6 +647,7 @@ function App() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [submitSuccess, setSubmitSuccess] = useState(false);
 	const [heroImage, setHeroImage] = useState<string | null>(null);
+	const [heroUploading, setHeroUploading] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -699,17 +702,31 @@ function App() {
 		document.getElementById("contact-form")?.scrollIntoView({ behavior: "smooth" });
 	};
 
-	const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleImageUpload = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
 		if (!file.type.startsWith("image/")) return;
-		const reader = new FileReader();
-		reader.onload = (event) => {
-			const dataUrl = event.target?.result as string;
-			setHeroImage(dataUrl);
-			localStorage.setItem(HERO_IMAGE_KEY, dataUrl);
-		};
-		reader.readAsDataURL(file);
+
+		if (isCloudinaryConfigured()) {
+			setHeroUploading(true);
+			try {
+				const secureUrl = await uploadToCloudinary(file);
+				setHeroImage(secureUrl);
+				localStorage.setItem(HERO_IMAGE_KEY, secureUrl);
+			} catch (err) {
+				console.error("Cloudinary upload failed:", err);
+			} finally {
+				setHeroUploading(false);
+			}
+		} else {
+			const reader = new FileReader();
+			reader.onload = (event) => {
+				const dataUrl = event.target?.result as string;
+				setHeroImage(dataUrl);
+				localStorage.setItem(HERO_IMAGE_KEY, dataUrl);
+			};
+			reader.readAsDataURL(file);
+		}
 	}, []);
 
 	const handleRemoveImage = useCallback(() => {
@@ -766,6 +783,7 @@ function App() {
 										src={heroImage}
 										alt="Professional electrical work by LT Electrical Services"
 										className="absolute inset-0 w-full h-full object-cover"
+										onError={() => { setHeroImage(null); localStorage.removeItem(HERO_IMAGE_KEY); }}
 									/>
 								) : (
 									<>
@@ -818,9 +836,10 @@ function App() {
 											size="sm"
 											className="bg-blue-600 hover:bg-blue-700 shadow-lg"
 											onClick={() => fileInputRef.current?.click()}
+											disabled={heroUploading}
 										>
-											<Upload className="size-4 mr-1" />
-											Upload Image
+											{heroUploading ? <Loader2 className="size-4 mr-1 animate-spin" /> : <Upload className="size-4 mr-1" />}
+											{heroUploading ? "Uploading..." : "Upload Image"}
 										</Button>
 										{heroImage && (
 											<Button

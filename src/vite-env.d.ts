@@ -3,7 +3,8 @@
 
 interface ImportMetaEnv {
 	readonly TENANT_ID?: string;
-	// add more env vars as needed
+	readonly VITE_CLOUDINARY_CLOUD_NAME?: string;
+	readonly VITE_CLOUDINARY_UPLOAD_PRESET?: string;
 }
 
 interface ImportMeta {

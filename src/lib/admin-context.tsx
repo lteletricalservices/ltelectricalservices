@@ -22,7 +22,9 @@ import {
 	Lock,
 	RotateCcw,
 	CheckCircle2,
+	Loader2,
 } from "lucide-react";
+import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -355,55 +357,81 @@ export function EditableImage({
 	wrapperClassName?: string;
 }) {
 	const fileRef = useRef<HTMLInputElement>(null);
+	const [uploading, setUploading] = useState(false);
+	const [uploadError, setUploadError] = useState("");
 
 	const currentSrc = contentEdits[id] ?? defaultSrc;
 	const isEdited = id in contentEdits;
 
-	const handleUpload = (e: ChangeEvent<HTMLInputElement>) => {
+	const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file || !file.type.startsWith("image/")) return;
-		const reader = new FileReader();
-		reader.onload = (ev) => {
-			const dataUrl = ev.target?.result as string;
-			onSave(id, dataUrl);
-		};
-		reader.readAsDataURL(file);
+
+		if (isCloudinaryConfigured()) {
+			setUploading(true);
+			setUploadError("");
+			try {
+				const secureUrl = await uploadToCloudinary(file);
+				onSave(id, secureUrl);
+			} catch (err) {
+				setUploadError(err instanceof Error ? err.message : "Upload failed");
+			} finally {
+				setUploading(false);
+			}
+		} else {
+			const reader = new FileReader();
+			reader.onload = (ev) => {
+				const dataUrl = ev.target?.result as string;
+				onSave(id, dataUrl);
+			};
+			reader.readAsDataURL(file);
+		}
 	};
 
 	const handleRemove = () => {
 		onSave(id, "");
+		setUploadError("");
 		if (fileRef.current) fileRef.current.value = "";
 	};
 
 	return (
 		<div className={`relative group/img ${wrapperClassName ?? ""}`}>
 			{currentSrc ? (
-				<img src={currentSrc} alt={alt} className={className} />
+				<img src={currentSrc} alt={alt} className={className} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
 			) : (
 				<div className={`flex items-center justify-center bg-slate-200 ${className ?? ""}`}>
 					<ImageIcon className="size-12 text-slate-400" />
 				</div>
 			)}
 			{isAdmin && (
-				<div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
-					<button
-						type="button"
-						onClick={() => fileRef.current?.click()}
-						className="bg-blue-600 text-white rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-lg"
-					>
-						<Upload className="size-3" /> Upload
-					</button>
-					{isEdited && currentSrc && (
+				<>
+					<div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
 						<button
 							type="button"
-							onClick={handleRemove}
-							className="bg-red-600 text-white rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-lg"
+							onClick={() => fileRef.current?.click()}
+							disabled={uploading}
+							className="bg-blue-600 text-white rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-lg disabled:opacity-60"
 						>
-							<Trash2 className="size-3" /> Remove
+							{uploading ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-3" />}
+							{uploading ? "Uploading..." : "Upload"}
 						</button>
+						{isEdited && currentSrc && (
+							<button
+								type="button"
+								onClick={handleRemove}
+								className="bg-red-600 text-white rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-lg"
+							>
+								<Trash2 className="size-3" /> Remove
+							</button>
+						)}
+						<input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+					</div>
+					{uploadError && (
+						<div className="absolute bottom-2 left-2 right-2 bg-red-600 text-white text-xs rounded px-2 py-1">
+							{uploadError}
+						</div>
 					)}
-					<input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
-				</div>
+				</>
 			)}
 			{isAdmin && isEdited && <span className="absolute top-1 left-1 size-2 rounded-full bg-blue-500" />}
 		</div>

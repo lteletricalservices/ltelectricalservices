@@ -2,8 +2,8 @@
 // - Namespace: 01987547fc6c72ecb453bd2736bd4ea0.
 // - Entity Name: contact_quote.
 // - Entity ID: 102019c1341eb64763ab1be2109ef48dc96.
-// - Entity Version: 102019c80a6d48a7022815cfc71da79f2cc.
-// - Task ID: 6999c435355bd553adeffb6f.
+// - Entity Version: 102019c84ce4fda7e98ac233df67d714b42.
+// - Task ID: 699ad44be200970100360432.
 // - Task Root ID: 697dc27eb1f12e575600d68f.
 
 import { DataType } from "./common";
@@ -67,8 +67,8 @@ export class ContactQuoteORM {
     this.namespace = '01987547fc6c72ecb453bd2736bd4ea0';
     this.entityId = '102019c1341eb64763ab1be2109ef48dc96';
     this.entityName = 'contact_quote';
-    this.entityVersion = '102019c80a6d48a7022815cfc71da79f2cc';
-    this.taskId = '6999c435355bd553adeffb6f';
+    this.entityVersion = '102019c84ce4fda7e98ac233df67d714b42';
+    this.taskId = '699ad44be200970100360432';
     this.taskRootId = '697dc27eb1f12e575600d68f';
   }
 

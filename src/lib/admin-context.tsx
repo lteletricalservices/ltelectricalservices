@@ -25,26 +25,13 @@ import {
 	Loader2,
 } from "lucide-react";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
+import { fetchPublishedContent, saveContentToServer, subscribeToContentUpdates, isArticlesApiConfigured } from "@/lib/articles-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-const CONTENT_STORAGE_KEY = "lt-electrical-content-edits";
 const ADMIN_SESSION_KEY = "lt-electrical-admin-session";
 const ADMIN_PASSWORD = "Bollocks£420";
-
-function loadContentEdits(): Record<string, string> {
-	try {
-		const stored = localStorage.getItem(CONTENT_STORAGE_KEY);
-		return stored ? JSON.parse(stored) : {};
-	} catch {
-		return {};
-	}
-}
-
-function saveContentEdits(edits: Record<string, string>) {
-	localStorage.setItem(CONTENT_STORAGE_KEY, JSON.stringify(edits));
-}
 
 function getAdminSession(): boolean {
 	return sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
@@ -79,9 +66,42 @@ export function useAdmin(): AdminContextValue {
 export function AdminProvider({ children }: { children: ReactNode }) {
 	const [isAdmin, setIsAdmin] = useState(getAdminSession);
 	const [contentEdits, setContentEdits] = useState<Record<string, string>>({});
+	const [serverLoaded, setServerLoaded] = useState(false);
+	// Guard to skip realtime echoes of our own saves
+	const skipNextRealtime = useRef(false);
 
+	// On mount: fetch published content from Supabase for all visitors,
+	// then subscribe to realtime updates for cross-browser sync.
 	useEffect(() => {
-		setContentEdits(loadContentEdits());
+		let cancelled = false;
+
+		async function load() {
+			if (isArticlesApiConfigured()) {
+				const serverContent = await fetchPublishedContent();
+				if (!cancelled && serverContent && Object.keys(serverContent).length > 0) {
+					setContentEdits(serverContent);
+				}
+			}
+			if (!cancelled) {
+				setServerLoaded(true);
+			}
+		}
+
+		load();
+
+		// Subscribe to realtime updates so changes appear instantly across browsers
+		const unsubscribe = subscribeToContentUpdates((updatedContent) => {
+			if (skipNextRealtime.current) {
+				skipNextRealtime.current = false;
+				return;
+			}
+			setContentEdits(updatedContent);
+		});
+
+		return () => {
+			cancelled = true;
+			unsubscribe();
+		};
 	}, []);
 
 	const handleContentSave = useCallback((id: string, value: string) => {
@@ -92,14 +112,18 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 			} else {
 				next[id] = value;
 			}
-			saveContentEdits(next);
+			// Persist to Supabase immediately
+			skipNextRealtime.current = true;
+			saveContentToServer(next);
 			return next;
 		});
 	}, []);
 
 	const handleResetAllEdits = useCallback(() => {
 		setContentEdits({});
-		localStorage.removeItem(CONTENT_STORAGE_KEY);
+		// Clear the Supabase row
+		skipNextRealtime.current = true;
+		saveContentToServer({});
 	}, []);
 
 	const editCount = Object.keys(contentEdits).length;
@@ -130,7 +154,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 				handleAdminLogout,
 			}}
 		>
-			{children}
+			{serverLoaded ? children : null}
 		</AdminContext.Provider>
 	);
 }
@@ -539,24 +563,26 @@ export function AdminToolbar() {
 	if (!isAdmin) return null;
 
 	return (
-		<div className="fixed bottom-4 right-4 z-50 flex gap-2">
-			{editCount > 0 && (
-				<button
-					onClick={handleResetAllEdits}
-					className="bg-orange-600 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm hover:bg-orange-700 transition-colors"
-				>
-					<RotateCcw className="size-4" />
-					<span>
-						Reset {editCount} edit{editCount !== 1 ? "s" : ""}
-					</span>
-				</button>
-			)}
-			<div className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm">
-				<Pencil className="size-4" />
-				<span>Admin mode - edit text, links, images & colors</span>
-				<button onClick={handleAdminLogout} className="ml-2 hover:text-green-200">
-					<LogOut className="size-4" />
-				</button>
+		<div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 items-end">
+			<div className="flex gap-2">
+				{editCount > 0 && (
+					<button
+						onClick={handleResetAllEdits}
+						className="bg-orange-600 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm hover:bg-orange-700 transition-colors"
+					>
+						<RotateCcw className="size-4" />
+						<span>
+							Reset {editCount} edit{editCount !== 1 ? "s" : ""}
+						</span>
+					</button>
+				)}
+				<div className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm">
+					<Pencil className="size-4" />
+					<span>Admin mode — edits save automatically</span>
+					<button onClick={handleAdminLogout} className="ml-2 hover:text-green-200">
+						<LogOut className="size-4" />
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -564,7 +590,13 @@ export function AdminToolbar() {
 
 /** Admin login dialog - place in footer or wherever needed */
 export function AdminLoginDialog() {
-	const { isAdmin, editCount, handleAdminLogin, handleAdminLogout, handleResetAllEdits } = useAdmin();
+	const {
+		isAdmin,
+		editCount,
+		handleAdminLogin,
+		handleAdminLogout,
+		handleResetAllEdits,
+	} = useAdmin();
 	const [adminDialogOpen, setAdminDialogOpen] = useState(false);
 	const [adminPassword, setAdminPassword] = useState("");
 	const [adminLoginError, setAdminLoginError] = useState("");
@@ -603,12 +635,13 @@ export function AdminLoginDialog() {
 						<div className="space-y-4 pt-4">
 							<p className="text-sm text-slate-600">
 								You are logged in as admin. Click text to edit, hover links to change URLs, hover images to upload
-								new ones, and use color pickers to restyle sections. Session persists across pages.
+								new ones, and use color pickers to restyle sections. All changes save to Supabase automatically and appear instantly across all browsers.
 							</p>
+
 							{editCount > 0 && (
 								<div className="border rounded-lg p-3">
 									<p className="text-xs text-slate-500 mb-2">
-										{editCount} text edit{editCount !== 1 ? "s" : ""} saved
+										{editCount} edit{editCount !== 1 ? "s" : ""} saved
 									</p>
 									<Button onClick={handleResetAllEdits} variant="outline" size="sm" className="w-full">
 										<RotateCcw className="size-3 mr-2" />

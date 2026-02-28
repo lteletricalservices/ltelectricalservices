@@ -1,6 +1,6 @@
 {
   "id": "102019c1341eb64763ab1be2109ef48dc96",
-  "version": "102019ca3b1cabc7898927a85ff5704f554",
+  "version": "102019ca475fbc47edf9238750f2994ba85",
   "schema": {
     "name": "contact_quote",
     "description": "Stores form submissions from customers requesting quotes for electrical services",
@@ -103,6 +103,22 @@
           {
             "number": 3,
             "value": "EmergencyCallouts"
+          },
+          {
+            "number": 4,
+            "value": "EICRTesting"
+          },
+          {
+            "number": 5,
+            "value": "EVChargerInstallation"
+          },
+          {
+            "number": 6,
+            "value": "FireSafetySystems"
+          },
+          {
+            "number": 7,
+            "value": "Other"
           }
         ]
       },
@@ -114,6 +130,36 @@
           "confidentiality": 2,
           "reason": "Customer input content"
         }
+      },
+      {
+        "name": "postcode",
+        "description": "Postcode of the customer location",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Customer location information"
+        },
+        "nullable": true
+      },
+      {
+        "name": "page_url",
+        "description": "URL of the page where the form was submitted",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal tracking data"
+        },
+        "nullable": true
+      },
+      {
+        "name": "status",
+        "description": "Status of the quote processing, default new",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Business tracking status"
+        },
+        "nullable": true
       }
     ],
     "indexes": [
@@ -154,11 +200,17 @@
           "service_type"
         ],
         "order": false
+      },
+      {
+        "fields": [
+          "status"
+        ],
+        "order": false
       }
     ]
   },
   "task": {
-    "id": "69a2bcb57fa07e0914a012e2",
+    "id": "69a2eeed3bb88cf1603af85a",
     "root": "697dc27eb1f12e575600d68f",
     "project": "697dc27eb1f12e575600d68e",
     "user": "b841e340-2001-7005-fde8-27c1f6ed0b84"

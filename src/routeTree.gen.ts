@@ -13,6 +13,8 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as NewsImport } from './routes/news'
 import { Route as IndexImport } from './routes/index'
+import { Route as AdminQuotesImport } from './routes/admin.quotes'
+import { Route as AdminArticlesImport } from './routes/admin.articles'
 
 // Create/Update Routes
 
@@ -25,6 +27,18 @@ const NewsRoute = NewsImport.update({
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AdminQuotesRoute = AdminQuotesImport.update({
+  id: '/admin/quotes',
+  path: '/admin/quotes',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AdminArticlesRoute = AdminArticlesImport.update({
+  id: '/admin/articles',
+  path: '/admin/articles',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -46,6 +60,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NewsImport
       parentRoute: typeof rootRoute
     }
+    '/admin/articles': {
+      id: '/admin/articles'
+      path: '/admin/articles'
+      fullPath: '/admin/articles'
+      preLoaderRoute: typeof AdminArticlesImport
+      parentRoute: typeof rootRoute
+    }
+    '/admin/quotes': {
+      id: '/admin/quotes'
+      path: '/admin/quotes'
+      fullPath: '/admin/quotes'
+      preLoaderRoute: typeof AdminQuotesImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -54,36 +82,46 @@ declare module '@tanstack/react-router' {
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/news': typeof NewsRoute
+  '/admin/articles': typeof AdminArticlesRoute
+  '/admin/quotes': typeof AdminQuotesRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/news': typeof NewsRoute
+  '/admin/articles': typeof AdminArticlesRoute
+  '/admin/quotes': typeof AdminQuotesRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/news': typeof NewsRoute
+  '/admin/articles': typeof AdminArticlesRoute
+  '/admin/quotes': typeof AdminQuotesRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/news'
+  fullPaths: '/' | '/news' | '/admin/articles' | '/admin/quotes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/news'
-  id: '__root__' | '/' | '/news'
+  to: '/' | '/news' | '/admin/articles' | '/admin/quotes'
+  id: '__root__' | '/' | '/news' | '/admin/articles' | '/admin/quotes'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   NewsRoute: typeof NewsRoute
+  AdminArticlesRoute: typeof AdminArticlesRoute
+  AdminQuotesRoute: typeof AdminQuotesRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   NewsRoute: NewsRoute,
+  AdminArticlesRoute: AdminArticlesRoute,
+  AdminQuotesRoute: AdminQuotesRoute,
 }
 
 export const routeTree = rootRoute
@@ -97,7 +135,9 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/news"
+        "/news",
+        "/admin/articles",
+        "/admin/quotes"
       ]
     },
     "/": {
@@ -105,6 +145,12 @@ export const routeTree = rootRoute
     },
     "/news": {
       "filePath": "news.tsx"
+    },
+    "/admin/articles": {
+      "filePath": "admin.articles.tsx"
+    },
+    "/admin/quotes": {
+      "filePath": "admin.quotes.tsx"
     }
   }
 }

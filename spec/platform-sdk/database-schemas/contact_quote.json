@@ -1,6 +1,6 @@
 {
-  "id": "102019c1341c7b67cf781f17f520bc95338",
-  "version": "102019c1341c7b67c3e891921207b2bda71",
+  "id": "102019ca44369bf7ecd8ae34ea29bcaebb0",
+  "version": "102019ca44369bf7e5ab665cb5b039dffa2",
   "schema": {
     "name": "contact_quote",
     "description": "Stores form submissions from customers requesting quotes for electrical services",
@@ -103,6 +103,22 @@
           {
             "number": 3,
             "value": "EmergencyCallouts"
+          },
+          {
+            "number": 4,
+            "value": "EICRTesting"
+          },
+          {
+            "number": 5,
+            "value": "EVChargerInstallation"
+          },
+          {
+            "number": 6,
+            "value": "FireSafetySystems"
+          },
+          {
+            "number": 7,
+            "value": "Other"
           }
         ]
       },
@@ -114,6 +130,36 @@
           "confidentiality": 2,
           "reason": "Customer input content"
         }
+      },
+      {
+        "name": "postcode",
+        "description": "Postcode of the customer location",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Customer location information"
+        },
+        "nullable": true
+      },
+      {
+        "name": "page_url",
+        "description": "URL of the page where the form was submitted",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal tracking data"
+        },
+        "nullable": true
+      },
+      {
+        "name": "status",
+        "description": "Status of the quote processing, default new",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Business tracking status"
+        },
+        "nullable": true
       }
     ],
     "indexes": [
@@ -154,11 +200,17 @@
           "service_type"
         ],
         "order": false
+      },
+      {
+        "fields": [
+          "status"
+        ],
+        "order": false
       }
     ]
   },
   "task": {
-    "id": "697dc27eb1f12e575600d68f",
+    "id": "69a2e165d364f3e80c7369cb",
     "root": "697dc27eb1f12e575600d68f",
     "project": "697dc27eb1f12e575600d68e",
     "user": "b841e340-2001-7005-fde8-27c1f6ed0b84"

@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,18 +22,37 @@ import {
 	ChevronRight,
 	Upload,
 	Trash2,
+	FileText,
 } from "lucide-react";
 import { useAdmin, E, EditableLink, EditableColor, EditableImage } from "@/lib/admin-context";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
+import { type Article, parseArticles } from "@/lib/articles-api";
 
 export const Route = createFileRoute("/news")({
 	component: NewsPage,
+	validateSearch: (search: Record<string, unknown>): { article?: string } => ({
+		article: (search.article as string) || undefined,
+	}),
 });
 
-type ArticleId = "rhys-irwin" | "eicr-guide" | "pat-testing" | "defibrillators";
+type HardcodedArticleId = "rhys-irwin" | "eicr-guide" | "pat-testing" | "defibrillators";
 
-const articles: {
-	id: ArticleId;
+const CATEGORY_COLORS: Record<string, string> = {
+	Sponsorship: "bg-amber-100 text-amber-800",
+	Community: "bg-red-100 text-red-800",
+	Guides: "bg-blue-100 text-blue-800",
+	News: "bg-green-100 text-green-800",
+	Projects: "bg-purple-100 text-purple-800",
+	Safety: "bg-orange-100 text-orange-800",
+	Other: "bg-slate-100 text-slate-800",
+};
+
+function getCategoryColor(category: string): string {
+	return CATEGORY_COLORS[category] ?? "bg-slate-100 text-slate-800";
+}
+
+const hardcodedArticles: {
+	id: HardcodedArticleId;
 	titleId: string;
 	title: string;
 	descId: string;
@@ -93,9 +112,90 @@ const articles: {
 	},
 ];
 
-function NewsPage() {
-	const [activeArticle, setActiveArticle] = useState<ArticleId | null>(null);
+const HARDCODED_IDS = new Set<string>(hardcodedArticles.map((a) => a.id));
+
+function isHardcodedId(id: string): id is HardcodedArticleId {
+	return HARDCODED_IDS.has(id);
+}
+
+/** Generic article detail view for dynamic (non-hardcoded) articles */
+function DynamicArticleDetail({ article }: { article: Article }) {
 	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
+	return (
+		<article className="prose prose-lg max-w-none">
+			<h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">{article.title}</h1>
+			<div className="flex items-center gap-3 mb-6">
+				<span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${getCategoryColor(article.category)}`}>
+					{article.category}
+				</span>
+				<span className="text-sm text-slate-500">
+					{new Date(article.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
+				</span>
+			</div>
+			{article.intro && (
+				<p className="text-lg text-slate-600 mb-8">{article.intro}</p>
+			)}
+			{article.heroImageUrl && (
+				<div className="rounded-lg overflow-hidden mb-8">
+					<img src={article.heroImageUrl} alt={article.title} className="w-full max-h-96 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+				</div>
+			)}
+			{article.body && (
+				<div className="space-y-4">
+					{article.body.split("\n\n").map((paragraph, i) => (
+						<p key={i} className="text-base text-slate-700 leading-relaxed">{paragraph}</p>
+					))}
+				</div>
+			)}
+			<EditableColor
+				id={`news-dynamic-${article.id}-cta-bg`}
+				defaultColor="#2563eb"
+				isAdmin={isAdmin}
+				contentEdits={contentEdits}
+				onSave={handleContentSave}
+				className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl p-6 mt-8"
+			>
+				<h3 className="text-xl font-bold mb-2">Get in touch</h3>
+				<p className="text-sm mb-4">Contact us for any electrical work or enquiries.</p>
+				<div className="flex flex-col sm:flex-row gap-3">
+					<EditableLink
+						id={`news-dynamic-${article.id}-cta-phone`}
+						defaultHref="tel:01775710743"
+						isAdmin={isAdmin}
+						contentEdits={contentEdits}
+						onSave={handleContentSave}
+						className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 hover:bg-slate-100 px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
+					>
+						<Phone className="size-4" />
+						Call: 01775 710743
+					</EditableLink>
+					<EditableLink
+						id={`news-dynamic-${article.id}-cta-email`}
+						defaultHref="mailto:admin@ltelectricalservices.co.uk"
+						isAdmin={isAdmin}
+						contentEdits={contentEdits}
+						onSave={handleContentSave}
+						className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/30 px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
+					>
+						<Mail className="size-4" />
+						Email Us
+					</EditableLink>
+				</div>
+			</EditableColor>
+		</article>
+	);
+}
+
+function NewsPage() {
+	const { article: activeArticle } = Route.useSearch();
+	const navigate = useNavigate();
+	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
+
+	// Parse dynamic articles from content edits
+	const dynamicArticles = useMemo(() => parseArticles(contentEdits), [contentEdits]);
+
+	// Find a dynamic article by its id
+	const activeDynamic = dynamicArticles.find((a) => a.id === activeArticle);
 
 	if (activeArticle) {
 		return (
@@ -130,7 +230,7 @@ function NewsPage() {
 				<div className="container mx-auto px-4 py-8 max-w-4xl">
 					<button
 						type="button"
-						onClick={() => setActiveArticle(null)}
+						onClick={() => navigate({ to: "/news" })}
 						className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-8 font-medium transition-colors"
 					>
 						<ArrowLeft className="size-4" />
@@ -141,6 +241,7 @@ function NewsPage() {
 					{activeArticle === "eicr-guide" && <EICRArticle />}
 					{activeArticle === "pat-testing" && <PATTestingArticle />}
 					{activeArticle === "defibrillators" && <DefibrillatorArticle />}
+					{activeDynamic && <DynamicArticleDetail article={activeDynamic} />}
 				</div>
 
 				<Footer />
@@ -189,7 +290,55 @@ function NewsPage() {
 			<section className="py-16">
 				<div className="container mx-auto px-4 max-w-5xl">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-						{articles.map((article) => {
+						{/* Dynamic articles (newest first) */}
+						{dynamicArticles.map((article) => (
+							<Card
+								key={article.id}
+								className="hover:shadow-lg transition-shadow cursor-pointer group"
+								onClick={() => navigate({ to: "/news", search: { article: article.id } })}
+							>
+								{article.thumbnailUrl ? (
+									<div className="rounded-t-xl overflow-hidden">
+										<img
+											src={article.thumbnailUrl}
+											alt={article.title}
+											className="w-full aspect-video object-cover"
+											onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+										/>
+									</div>
+								) : (
+									<div className="rounded-t-xl overflow-hidden">
+										<div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+											<FileText className="size-20 text-slate-600 opacity-40 group-hover:opacity-60 transition-opacity" />
+										</div>
+									</div>
+								)}
+								<CardHeader>
+									<div className="flex items-center gap-2 mb-2">
+										<span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${getCategoryColor(article.category)}`}>
+											{article.category || "News"}
+										</span>
+										<span className="text-xs text-muted-foreground">
+											{new Date(article.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+										</span>
+									</div>
+									<CardTitle className="group-hover:text-blue-600 transition-colors">
+										{article.title}
+									</CardTitle>
+									{article.intro && (
+										<CardDescription>{article.intro}</CardDescription>
+									)}
+								</CardHeader>
+								<CardContent>
+									<span className="text-blue-600 font-medium text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+										Read article <ChevronRight className="size-4" />
+									</span>
+								</CardContent>
+							</Card>
+						))}
+
+						{/* Hardcoded articles */}
+						{hardcodedArticles.map((article) => {
 							const thumbnailKey = `articles.${article.id}.thumbnailUrl`;
 							const thumbnailUrl = contentEdits[thumbnailKey];
 							return (
@@ -198,7 +347,7 @@ function NewsPage() {
 									className="hover:shadow-lg transition-shadow cursor-pointer group"
 									onClick={(e) => {
 										if ((e.target as HTMLElement).closest("[data-slot='thumbnail-admin']")) return;
-										setActiveArticle(article.id);
+										navigate({ to: "/news", search: { article: article.id } });
 									}}
 								>
 									{thumbnailUrl ? (

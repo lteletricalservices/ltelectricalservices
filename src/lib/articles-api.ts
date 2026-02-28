@@ -2,6 +2,49 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const ROW_ID = "site-content";
 
+// ---------- Article types (stored inside content_edits JSON) ----------
+
+export interface Article {
+	id: string;
+	title: string;
+	slug: string;
+	category: string;
+	intro: string;
+	body: string;
+	thumbnailUrl: string | null;
+	heroImageUrl: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export const ARTICLES_KEY = "__articles";
+
+export function generateSlug(title: string): string {
+	return title
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 80);
+}
+
+/** Parse articles from the content edits map */
+export function parseArticles(contentEdits: Record<string, string>): Article[] {
+	const raw = contentEdits[ARTICLES_KEY];
+	if (!raw) return [];
+	try {
+		const arr = JSON.parse(raw);
+		if (!Array.isArray(arr)) return [];
+		return arr as Article[];
+	} catch {
+		return [];
+	}
+}
+
+/** Generate a unique ID for a new article */
+export function generateArticleId(): string {
+	return `art-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 /**
  * Whether the Supabase articles storage is configured.
  */

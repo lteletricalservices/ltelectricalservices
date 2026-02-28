@@ -33,6 +33,34 @@ import {
 	EyeOff,
 	ChevronUp,
 	ChevronDown,
+	Settings2,
+	Shield,
+	Zap,
+	Phone,
+	Mail,
+	MapPin,
+	Clock,
+	Star,
+	Building2,
+	AlertCircle,
+	ClipboardCheck,
+	Car,
+	Flame,
+	Users,
+	DollarSign,
+	Sparkles,
+	TrendingUp,
+	Home,
+	Plug,
+	Heart,
+	PawPrint,
+	PoundSterling,
+	Wrench,
+	Lightbulb,
+	BadgeCheck,
+	ThumbsUp,
+	Award,
+	type LucideIcon,
 } from "lucide-react";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 import {
@@ -46,6 +74,44 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+// ---------- Icon Registry ----------
+
+export const ICON_REGISTRY: Record<string, { icon: LucideIcon; label: string }> = {
+	shield: { icon: Shield, label: "Shield" },
+	zap: { icon: Zap, label: "Bolt" },
+	check: { icon: CheckCircle2, label: "Check" },
+	phone: { icon: Phone, label: "Phone" },
+	mail: { icon: Mail, label: "Email" },
+	"map-pin": { icon: MapPin, label: "Map Pin" },
+	clock: { icon: Clock, label: "Clock" },
+	star: { icon: Star, label: "Star" },
+	building: { icon: Building2, label: "Building" },
+	alert: { icon: AlertCircle, label: "Alert" },
+	clipboard: { icon: ClipboardCheck, label: "Clipboard" },
+	car: { icon: Car, label: "Car / EV" },
+	flame: { icon: Flame, label: "Flame" },
+	users: { icon: Users, label: "Users" },
+	dollar: { icon: DollarSign, label: "Dollar" },
+	pound: { icon: PoundSterling, label: "Pound" },
+	sparkles: { icon: Sparkles, label: "Sparkles" },
+	trending: { icon: TrendingUp, label: "Trending" },
+	home: { icon: Home, label: "Home" },
+	plug: { icon: Plug, label: "Plug" },
+	heart: { icon: Heart, label: "Heart" },
+	paw: { icon: PawPrint, label: "Paw Print" },
+	wrench: { icon: Wrench, label: "Wrench" },
+	lightbulb: { icon: Lightbulb, label: "Lightbulb" },
+	badge: { icon: BadgeCheck, label: "Badge" },
+	"thumbs-up": { icon: ThumbsUp, label: "Thumbs Up" },
+	award: { icon: Award, label: "Award" },
+	settings: { icon: Settings2, label: "Settings" },
+};
+
+export function getIconComponent(key: string): LucideIcon {
+	return ICON_REGISTRY[key]?.icon ?? Zap;
+}
 
 const ADMIN_SESSION_KEY = "lt-electrical-admin-session";
 const ADMIN_PASSWORD = "Bollocks£420";
@@ -85,6 +151,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
 ];
 
 const SECTION_CONFIG_KEY = "__section_config";
+const ARTICLES_CONTENT_KEY = "__articles";
 
 function parseSections(contentEdits: Record<string, string>): SectionConfig[] {
 	const raw = contentEdits[SECTION_CONFIG_KEY];
@@ -343,6 +410,7 @@ export function EditableText({
 export function EditableLink({
 	id,
 	defaultHref,
+	defaultLabel,
 	isAdmin,
 	contentEdits,
 	onSave,
@@ -351,6 +419,7 @@ export function EditableLink({
 }: {
 	id: string;
 	defaultHref: string;
+	defaultLabel?: string;
 	isAdmin: boolean;
 	contentEdits: Record<string, string>;
 	onSave: (id: string, value: string) => void;
@@ -358,55 +427,207 @@ export function EditableLink({
 	className?: string;
 }) {
 	const [editing, setEditing] = useState(false);
-	const [draft, setDraft] = useState("");
-	const inputRef = useRef<HTMLInputElement>(null);
+	const [draftHref, setDraftHref] = useState("");
+	const [draftLabel, setDraftLabel] = useState("");
+	const [linkMode, setLinkMode] = useState<"url" | "article">("url");
+	const [selectedArticleId, setSelectedArticleId] = useState("");
+	const hrefInputRef = useRef<HTMLInputElement>(null);
 
-	const currentHref = contentEdits[id] ?? defaultHref;
-	const isEdited = id in contentEdits;
+	const hrefKey = `${id}.href`;
+	const labelKey = `${id}.label`;
+	const currentHref = contentEdits[hrefKey] ?? defaultHref;
+	const currentLabel = contentEdits[labelKey] ?? defaultLabel;
+	const isEdited = hrefKey in contentEdits || labelKey in contentEdits;
+
+	// If href is explicitly cleared to empty, hide the link
+	const isCleared = contentEdits[hrefKey] === "__cleared__";
+
+	// Parse dynamic articles from content edits for the article picker
+	const dynamicArticles = useMemo(() => {
+		const raw = contentEdits[ARTICLES_CONTENT_KEY];
+		if (!raw) return [];
+		try {
+			const arr = JSON.parse(raw);
+			if (!Array.isArray(arr)) return [];
+			return arr as { id: string; title: string }[];
+		} catch {
+			return [];
+		}
+	}, [contentEdits]);
+
+	const hardcodedArticles = useMemo(() => [
+		{ id: "rhys-irwin", title: "Rhys Irwin Championship" },
+		{ id: "eicr-guide", title: "EICR Guide" },
+		{ id: "pat-testing", title: "PAT Testing Guide" },
+		{ id: "defibrillators", title: "Community Defibrillators" },
+	], []);
 
 	useEffect(() => {
-		if (editing && inputRef.current) {
-			inputRef.current.focus();
-			inputRef.current.select();
+		if (editing && linkMode === "url" && hrefInputRef.current) {
+			hrefInputRef.current.focus();
+			hrefInputRef.current.select();
 		}
-	}, [editing]);
+	}, [editing, linkMode]);
 
 	const save = useCallback(() => {
-		const trimmed = draft.trim();
-		if (trimmed && trimmed !== defaultHref) {
-			onSave(id, trimmed);
-		} else if (trimmed === defaultHref) {
-			onSave(id, "");
+		let finalHref: string;
+		if (linkMode === "article" && selectedArticleId) {
+			finalHref = `/news?article=${selectedArticleId}`;
+		} else {
+			finalHref = draftHref.trim();
 		}
+
+		const trimmedLabel = draftLabel.trim();
+
+		if (finalHref === "") {
+			onSave(hrefKey, "__cleared__");
+		} else if (finalHref !== defaultHref) {
+			onSave(hrefKey, finalHref);
+		} else {
+			onSave(hrefKey, "");
+		}
+
+		if (defaultLabel !== undefined) {
+			if (trimmedLabel && trimmedLabel !== defaultLabel) {
+				onSave(labelKey, trimmedLabel);
+			} else {
+				onSave(labelKey, "");
+			}
+		}
+
 		setEditing(false);
-	}, [draft, defaultHref, id, onSave]);
+	}, [linkMode, selectedArticleId, draftHref, draftLabel, defaultHref, defaultLabel, hrefKey, labelKey, onSave]);
+
+	const restore = useCallback(() => {
+		onSave(hrefKey, "");
+		onSave(labelKey, "");
+	}, [hrefKey, labelKey, onSave]);
+
+	const startEditing = useCallback(() => {
+		const href = currentHref;
+		setDraftLabel(currentLabel ?? (typeof children === "string" ? children : ""));
+
+		const articleMatch = href.match(/\/news\?article=(.+)$/);
+		if (articleMatch) {
+			setLinkMode("article");
+			setSelectedArticleId(articleMatch[1]);
+			setDraftHref(href);
+		} else {
+			setLinkMode("url");
+			setSelectedArticleId("");
+			setDraftHref(href);
+		}
+		setEditing(true);
+	}, [currentHref, currentLabel, children]);
+
+	if (isCleared) {
+		if (!isAdmin) return null;
+		return (
+			<span className="inline-flex items-center gap-1 opacity-50">
+				<span className="line-through text-xs text-slate-400">[hidden link]</span>
+				<button
+					type="button"
+					onClick={(e) => { e.preventDefault(); e.stopPropagation(); restore(); }}
+					className="bg-blue-600 text-white rounded-full p-0.5 text-xs"
+					title="Restore link"
+				>
+					<RotateCcw className="size-3" />
+				</button>
+			</span>
+		);
+	}
 
 	if (editing) {
 		return (
-			<div className="inline-flex items-center gap-1">
-				<input
-					ref={inputRef}
-					type="text"
-					value={draft}
-					onChange={(e) => setDraft(e.target.value)}
-					onBlur={save}
-					onKeyDown={(e) => {
-						if (e.key === "Enter") {
-							e.preventDefault();
-							save();
-						}
-						if (e.key === "Escape") setEditing(false);
-					}}
-					className="bg-white text-slate-900 border-2 border-blue-500 rounded px-2 py-1 outline-none text-sm min-w-[200px]"
-				/>
+			<div className="inline-flex flex-col gap-1.5 bg-white border-2 border-blue-500 rounded-lg p-2 shadow-lg min-w-[280px]" onClick={(e) => e.stopPropagation()}>
+				{defaultLabel !== undefined && (
+					<div>
+						<label className="text-[10px] font-medium text-slate-500 mb-0.5 block">Label</label>
+						<input
+							type="text"
+							value={draftLabel}
+							onChange={(e) => setDraftLabel(e.target.value)}
+							placeholder="Link label"
+							className="bg-slate-50 text-slate-900 border border-slate-300 rounded px-2 py-1 outline-none text-sm w-full focus:ring-1 focus:ring-blue-400"
+						/>
+					</div>
+				)}
+
+				<div className="flex gap-1">
+					<button
+						type="button"
+						onClick={() => setLinkMode("url")}
+						className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${linkMode === "url" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+					>
+						URL
+					</button>
+					<button
+						type="button"
+						onClick={() => setLinkMode("article")}
+						className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${linkMode === "article" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+					>
+						Article
+					</button>
+				</div>
+
+				{linkMode === "url" ? (
+					<div>
+						<label className="text-[10px] font-medium text-slate-500 mb-0.5 block">URL</label>
+						<input
+							ref={hrefInputRef}
+							type="text"
+							value={draftHref}
+							onChange={(e) => setDraftHref(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") { e.preventDefault(); save(); }
+								if (e.key === "Escape") setEditing(false);
+							}}
+							placeholder="https://... or leave empty to hide"
+							className="bg-slate-50 text-slate-900 border border-slate-300 rounded px-2 py-1 outline-none text-sm w-full focus:ring-1 focus:ring-blue-400"
+						/>
+					</div>
+				) : (
+					<div>
+						<label className="text-[10px] font-medium text-slate-500 mb-0.5 block">Select Article</label>
+						<select
+							value={selectedArticleId}
+							onChange={(e) => setSelectedArticleId(e.target.value)}
+							className="bg-slate-50 text-slate-900 border border-slate-300 rounded px-2 py-1 outline-none text-sm w-full focus:ring-1 focus:ring-blue-400"
+						>
+							<option value="">-- Choose an article --</option>
+							{dynamicArticles.length > 0 && (
+								<optgroup label="Your Articles">
+									{dynamicArticles.map((a) => (
+										<option key={a.id} value={a.id}>{a.title}</option>
+									))}
+								</optgroup>
+							)}
+							<optgroup label="Built-in Articles">
+								{hardcodedArticles.map((a) => (
+									<option key={a.id} value={a.id}>{a.title}</option>
+								))}
+							</optgroup>
+						</select>
+						{selectedArticleId && (
+							<p className="text-[10px] text-slate-400 mt-0.5">/news?article={selectedArticleId}</p>
+						)}
+					</div>
+				)}
+
+				<div className="flex gap-1 mt-0.5">
+					<button type="button" onClick={save} className="bg-blue-600 text-white rounded px-2 py-0.5 text-xs font-medium">Save</button>
+					<button type="button" onClick={() => setEditing(false)} className="bg-slate-200 text-slate-700 rounded px-2 py-0.5 text-xs">Cancel</button>
+				</div>
 			</div>
 		);
 	}
 
+	const displayChildren = currentLabel ?? children;
+
 	if (!isAdmin) {
 		return (
 			<a href={currentHref} className={className}>
-				{children}
+				{displayChildren}
 			</a>
 		);
 	}
@@ -414,18 +635,17 @@ export function EditableLink({
 	return (
 		<span className="relative inline-flex items-center group/link">
 			<a href={currentHref} className={className}>
-				{children}
+				{displayChildren}
 			</a>
 			<button
 				type="button"
 				onClick={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					setDraft(currentHref);
-					setEditing(true);
+					startEditing();
 				}}
 				className="ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity bg-blue-600 text-white rounded-full p-0.5"
-				title="Edit link URL"
+				title="Edit link"
 			>
 				<LinkIcon className="size-3" />
 			</button>
@@ -623,6 +843,97 @@ export function EditableColor({
 			/>
 			{isEdited && <span className="absolute top-1 right-1 size-2 rounded-full bg-blue-500" />}
 		</div>
+	);
+}
+
+export function EditableIcon({
+	id,
+	defaultIcon,
+	className,
+	isAdmin,
+	contentEdits,
+	onSave,
+}: {
+	id: string;
+	defaultIcon: string;
+	className?: string;
+	isAdmin: boolean;
+	contentEdits: Record<string, string>;
+	onSave: (id: string, value: string) => void;
+}) {
+	const [open, setOpen] = useState(false);
+	const currentKey = contentEdits[id] ?? defaultIcon;
+	const isEdited = id in contentEdits;
+	const IconComp = getIconComponent(currentKey);
+
+	const handleSelect = (key: string) => {
+		if (key !== defaultIcon) {
+			onSave(id, key);
+		} else {
+			onSave(id, "");
+		}
+		setOpen(false);
+	};
+
+	if (!isAdmin) {
+		return <IconComp className={className} />;
+	}
+
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<button
+					type="button"
+					className="relative group/icon cursor-pointer ring-blue-400 hover:ring-2 rounded-lg transition-all p-0.5"
+					title="Change icon"
+				>
+					<IconComp className={className} />
+					<span className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full p-0.5 opacity-0 group-hover/icon:opacity-100 transition-opacity shadow-sm">
+						<Settings2 className="size-2.5" />
+					</span>
+					{isEdited && <span className="absolute -top-1 -right-1 size-2 rounded-full bg-blue-500" />}
+				</button>
+			</PopoverTrigger>
+			<PopoverContent className="w-64 p-2" align="start">
+				<p className="text-xs font-medium text-slate-500 mb-2 px-1">Choose icon</p>
+				<div className="grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
+					{Object.entries(ICON_REGISTRY).map(([key, { icon: Ic, label }]) => (
+						<button
+							key={key}
+							type="button"
+							onClick={() => handleSelect(key)}
+							className={`flex items-center justify-center p-2 rounded-md transition-colors ${currentKey === key ? "bg-blue-100 ring-2 ring-blue-500" : "hover:bg-slate-100"}`}
+							title={label}
+						>
+							<Ic className="size-4 text-slate-700" />
+						</button>
+					))}
+				</div>
+			</PopoverContent>
+		</Popover>
+	);
+}
+
+/** Shorthand `EditableIcon` that auto-wires admin context */
+export function EIcon({
+	id,
+	defaultIcon,
+	className,
+}: {
+	id: string;
+	defaultIcon: string;
+	className?: string;
+}) {
+	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
+	return (
+		<EditableIcon
+			id={id}
+			defaultIcon={defaultIcon}
+			className={className}
+			isAdmin={isAdmin}
+			contentEdits={contentEdits}
+			onSave={handleContentSave}
+		/>
 	);
 }
 
@@ -1110,6 +1421,17 @@ export function AdminLoginDialog() {
 										Click text to edit, hover links to change URLs, hover images to upload.
 										All changes save to Supabase automatically.
 									</p>
+
+									<div className="flex gap-2">
+										<a href="/admin/articles" className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
+											<Pencil className="size-3" />
+											Articles
+										</a>
+										<a href="/admin/quotes" className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 transition-colors">
+											<Mail className="size-3" />
+											Quotes
+										</a>
+									</div>
 
 									{editCount > 0 && (
 										<div className="border rounded-lg p-2">

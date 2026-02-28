@@ -2,8 +2,8 @@
 // - Namespace: 01987547fc6c72ecb453bd2736bd4ea0.
 // - Entity Name: contact_quote.
 // - Entity ID: 102019c1341eb64763ab1be2109ef48dc96.
-// - Entity Version: 102019ca3b1cabc7898927a85ff5704f554.
-// - Task ID: 69a2bcb57fa07e0914a012e2.
+// - Entity Version: 102019ca475fbc47edf9238750f2994ba85.
+// - Task ID: 69a2eeed3bb88cf1603af85a.
 // - Task Root ID: 697dc27eb1f12e575600d68f.
 
 import { DataType } from "./common";
@@ -24,6 +24,10 @@ export enum ContactQuoteServiceType {
   DomesticElectrical = 1,
   CommercialElectrical = 2,
   EmergencyCallouts = 3,
+  EICRTesting = 4,
+  EVChargerInstallation = 5,
+  FireSafetySystems = 6,
+  Other = 7,
 }
 
 
@@ -46,6 +50,9 @@ export interface ContactQuoteModel {
   phone: string;
   service_type: ContactQuoteServiceType;
   message: string;
+  postcode?: string | null;
+  page_url?: string | null;
+  status?: string | null;
 }
 
 /**
@@ -67,8 +74,8 @@ export class ContactQuoteORM {
     this.namespace = '01987547fc6c72ecb453bd2736bd4ea0';
     this.entityId = '102019c1341eb64763ab1be2109ef48dc96';
     this.entityName = 'contact_quote';
-    this.entityVersion = '102019ca3b1cabc7898927a85ff5704f554';
-    this.taskId = '69a2bcb57fa07e0914a012e2';
+    this.entityVersion = '102019ca475fbc47edf9238750f2994ba85';
+    this.taskId = '69a2eeed3bb88cf1603af85a';
     this.taskRootId = '697dc27eb1f12e575600d68f';
   }
 
@@ -691,6 +698,88 @@ export class ContactQuoteORM {
       }
     });
   }
+  /**
+   * Get contact_quote by Status index
+   * This function gets data by index.
+   */
+  async getContactQuoteByStatus(
+    status: string,
+  ): Promise<ContactQuoteModel[]> {
+    const index = createIndexStatus(
+      status
+    );
+
+    const response = await this.client.get({
+      id: this.entityId,
+      namespace: this.namespace,
+      name: this.entityName,
+      version: this.entityVersion,
+      task: this.taskId,
+      index: index,
+      format: {
+        structured: true
+      }
+    });
+
+    return this.resultToData(response.data?.values || []);
+  }
+
+  /**
+   * Set (update) contact_quote by Status index
+   * This function replaces data, so the data must be complete.
+   * Must keep `id`, `data_creator`, `create_time` unchanged as original data (as fetched).
+   * DO NOT SET `data_updater` and `update_time` since backend will fill it automatically.
+   * It will respond the set record, with `data_updater` and `update_time` filled by backend.
+   */
+  async setContactQuoteByStatus(
+    status: string,
+    data: ContactQuoteModel
+  ): Promise<ContactQuoteModel[]> {
+    const index = createIndexStatus(
+      status
+    );
+
+    const values = ContactQuoteModelToValues(data);
+    const structuredData = CreateData(values);
+
+    const response = await this.client.set({
+      id: this.entityId,
+      namespace: this.namespace,
+      name: this.entityName,
+      version: this.entityVersion,
+      task: this.taskId,
+      index: index,
+      data: structuredData,
+      format: {
+        structured: true
+      }
+    });
+
+    return this.resultToData(response.data?.values || []);
+  }
+
+  /**
+   * Delete contact_quote by Status index
+   */
+  async deleteContactQuoteByStatus(
+    status: string
+  ): Promise<void> {
+    const index = createIndexStatus(
+      status
+    );
+
+    await this.client.delete({
+      id: this.entityId,
+      namespace: this.namespace,
+      name: this.entityName,
+      version: this.entityVersion,
+      task: this.taskId,
+      index: index,
+      format: {
+        structured: true
+      }
+    });
+  }
 
   /**
    * Convert result data to ContactQuoteModel data array
@@ -731,6 +820,9 @@ function ContactQuoteModelToValues(data: ContactQuoteModel): Value[] {
     { key: 'phone', type: DataType.string, defaultValue: '' },
     { key: 'service_type', type: DataType.enumeration, defaultValue: 0 },
     { key: 'message', type: DataType.string, defaultValue: '' },
+    { key: 'postcode', type: DataType.string, defaultValue: null },
+    { key: 'page_url', type: DataType.string, defaultValue: null },
+    { key: 'status', type: DataType.string, defaultValue: null },
   ];
 
   return fieldMappings.map(({ key, type, defaultValue }) => {
@@ -778,6 +870,15 @@ function ContactQuoteModelFromValues(values: Value[]): ContactQuoteModel {
         break;
       case 'message':
         data.message = ParseValue(value, DataType.string) as string;
+        break;
+      case 'postcode':
+        data.postcode = ParseValue(value, DataType.string) as string | null;
+        break;
+      case 'page_url':
+        data.page_url = ParseValue(value, DataType.string) as string | null;
+        break;
+      case 'status':
+        data.status = ParseValue(value, DataType.string) as string | null;
         break;
     }
   }
@@ -873,6 +974,21 @@ function createIndexServiceType(
 
   return {
     fields: ['service_type'],
+    values
+  };
+}
+/**
+ * Create index for Status fields
+ */
+function createIndexStatus(
+  status: string
+): Index {
+  const values: Value[] = [
+    CreateValue(DataType.string, status, 'status'),
+  ];
+
+  return {
+    fields: ['status'],
     values
   };
 }

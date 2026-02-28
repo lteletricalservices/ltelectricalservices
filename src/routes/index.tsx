@@ -41,7 +41,6 @@ import { toast } from "sonner";
 import { ContactQuoteORM, ContactQuoteServiceType, type ContactQuoteModel } from "@/sdk/database/orm/orm_contact_quote";
 import { useAdmin, E, EIcon, EditableIcon, EditableLink, EditableImage, EditableColor, AdminSection } from "@/lib/admin-context";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
-import { sendQuoteNotification } from "@/lib/emailjs";
 
 export const Route = createFileRoute("/")({
 	component: App,
@@ -676,27 +675,29 @@ function App() {
 
 			await orm.insertContactQuote([contactQuote as ContactQuoteModel]);
 
-			// Send email notification (fire-and-forget — don't block success)
-			sendQuoteNotification({
-				name: values.name,
-				email: values.email,
-				phone: values.phone,
-				postcode: values.postcode || "",
-				service_type: values.service_type,
-				message: values.message,
-				page_url: window.location.href,
+			// Send email notification via Resend API route
+			fetch("/api/quote-request", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					name: values.name,
+					email: values.email,
+					phone: values.phone,
+					postcode: values.postcode || "",
+					serviceType: values.service_type,
+					message: values.message,
+				}),
 			}).catch(() => {
-				// Email failed silently — data is already saved
-				console.warn("EmailJS notification failed — enquiry saved to database");
+				console.warn("Email notification failed — enquiry saved to database");
 			});
 
 			setSubmitStatus("success");
-			toast.success("Thanks — your request has been sent. We'll reply shortly.");
+			toast.success("Thanks — your quote request has been sent.");
 			form.reset();
 		} catch (error) {
 			console.error("Error submitting form:", error);
 			setSubmitStatus("error");
-			toast.error("Sorry, something went wrong. Please call 01775 710743.");
+			toast.error("Something went wrong. Please call 01775 710743.");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -1203,13 +1204,13 @@ function App() {
 					{submitStatus === "success" && (
 						<div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-green-800">
 							<CheckCircle2 className="size-5 shrink-0" />
-							<p>Thanks — your request has been sent. We'll reply shortly.</p>
+							<p>Thanks — your quote request has been sent.</p>
 						</div>
 					)}
 					{submitStatus === "error" && (
 						<div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-800">
 							<AlertCircle className="size-5 shrink-0" />
-							<p>Sorry, something went wrong. Please call <a href="tel:01775710743" className="font-semibold underline">01775 710743</a>.</p>
+							<p>Something went wrong. Please call <a href="tel:01775710743" className="font-semibold underline">01775 710743</a>.</p>
 						</div>
 					)}
 

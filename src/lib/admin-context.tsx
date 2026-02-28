@@ -5,6 +5,7 @@ import {
 	useEffect,
 	useCallback,
 	useRef,
+	useMemo,
 	type ReactNode,
 	type KeyboardEvent as ReactKeyboardEvent,
 	type CSSProperties,
@@ -23,9 +24,25 @@ import {
 	RotateCcw,
 	CheckCircle2,
 	Loader2,
+	AlertTriangle,
+	Undo2,
+	History,
+	Map,
+	Search,
+	Eye,
+	EyeOff,
+	ChevronUp,
+	ChevronDown,
 } from "lucide-react";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
-import { fetchPublishedContent, saveContentToServer, subscribeToContentUpdates, isArticlesApiConfigured } from "@/lib/articles-api";
+import {
+	fetchPublishedContent,
+	saveContentToServer,
+	subscribeToContentUpdates,
+	isArticlesApiConfigured,
+	fetchSnapshots,
+	restoreFromSnapshot,
+} from "@/lib/articles-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -45,14 +62,53 @@ function setAdminSession(val: boolean) {
 	}
 }
 
+// ---------- Section ordering & visibility types ----------
+
+export interface SectionConfig {
+	id: string;
+	label: string;
+	visible: boolean;
+	order: number;
+	bgColor?: string;
+}
+
+const DEFAULT_SECTIONS: SectionConfig[] = [
+	{ id: "hero", label: "Hero", visible: true, order: 0 },
+	{ id: "trust", label: "Trust Indicators", visible: true, order: 1 },
+	{ id: "services", label: "Services", visible: true, order: 2 },
+	{ id: "why", label: "Why Choose Us", visible: true, order: 3 },
+	{ id: "areas", label: "Areas We Cover", visible: true, order: 4 },
+	{ id: "projects", label: "Recent Projects", visible: true, order: 5 },
+	{ id: "testimonials", label: "Testimonials", visible: true, order: 6 },
+	{ id: "cta", label: "CTA Banner", visible: true, order: 7 },
+	{ id: "contact", label: "Contact Form", visible: true, order: 8 },
+];
+
+const SECTION_CONFIG_KEY = "__section_config";
+
+function parseSections(contentEdits: Record<string, string>): SectionConfig[] {
+	const raw = contentEdits[SECTION_CONFIG_KEY];
+	if (raw) {
+		try {
+			return JSON.parse(raw) as SectionConfig[];
+		} catch { /* ignore */ }
+	}
+	return DEFAULT_SECTIONS;
+}
+
+// ---------- Context ----------
+
 interface AdminContextValue {
 	isAdmin: boolean;
 	contentEdits: Record<string, string>;
 	handleContentSave: (id: string, value: string) => void;
 	handleResetAllEdits: () => void;
+	handleUndoLastChange: () => Promise<void>;
 	editCount: number;
 	handleAdminLogin: (password: string) => boolean;
 	handleAdminLogout: () => void;
+	sections: SectionConfig[];
+	updateSections: (sections: SectionConfig[]) => void;
 }
 
 const AdminContext = createContext<AdminContextValue | null>(null);
@@ -67,11 +123,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 	const [isAdmin, setIsAdmin] = useState(getAdminSession);
 	const [contentEdits, setContentEdits] = useState<Record<string, string>>({});
 	const [serverLoaded, setServerLoaded] = useState(false);
-	// Guard to skip realtime echoes of our own saves
 	const skipNextRealtime = useRef(false);
 
-	// On mount: fetch published content from Supabase for all visitors,
-	// then subscribe to realtime updates for cross-browser sync.
 	useEffect(() => {
 		let cancelled = false;
 
@@ -89,7 +142,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
 		load();
 
-		// Subscribe to realtime updates so changes appear instantly across browsers
 		const unsubscribe = subscribeToContentUpdates((updatedContent) => {
 			if (skipNextRealtime.current) {
 				skipNextRealtime.current = false;
@@ -112,7 +164,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 			} else {
 				next[id] = value;
 			}
-			// Persist to Supabase immediately
 			skipNextRealtime.current = true;
 			saveContentToServer(next);
 			return next;
@@ -121,12 +172,28 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
 	const handleResetAllEdits = useCallback(() => {
 		setContentEdits({});
-		// Clear the Supabase row
 		skipNextRealtime.current = true;
 		saveContentToServer({});
 	}, []);
 
-	const editCount = Object.keys(contentEdits).length;
+	const handleUndoLastChange = useCallback(async () => {
+		const snapshots = await fetchSnapshots(2);
+		// The first snapshot is the current state, the second is the previous
+		if (snapshots.length >= 2) {
+			const previousContent = snapshots[1].content;
+			setContentEdits(previousContent);
+			skipNextRealtime.current = true;
+			await restoreFromSnapshot(previousContent);
+		}
+	}, []);
+
+	const sections = useMemo(() => parseSections(contentEdits), [contentEdits]);
+
+	const updateSections = useCallback((newSections: SectionConfig[]) => {
+		handleContentSave(SECTION_CONFIG_KEY, JSON.stringify(newSections));
+	}, [handleContentSave]);
+
+	const editCount = Object.keys(contentEdits).filter(k => k !== SECTION_CONFIG_KEY).length;
 
 	const handleAdminLogin = useCallback((password: string) => {
 		if (password === ADMIN_PASSWORD) {
@@ -149,9 +216,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 				contentEdits,
 				handleContentSave,
 				handleResetAllEdits,
+				handleUndoLastChange,
 				editCount,
 				handleAdminLogin,
 				handleAdminLogout,
+				sections,
+				updateSections,
 			}}
 		>
 			{serverLoaded ? children : null}
@@ -159,7 +229,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 	);
 }
 
-// ----- Editable Components -----
+// ---------- Editable Components ----------
 
 export function EditableText({
 	id,
@@ -196,7 +266,9 @@ export function EditableText({
 	useEffect(() => {
 		if (editing && inputRef.current) {
 			inputRef.current.focus();
-			inputRef.current.select();
+			if (inputRef.current instanceof HTMLInputElement) {
+				inputRef.current.select();
+			}
 		}
 	}, [editing]);
 
@@ -236,7 +308,7 @@ export function EditableText({
 				onBlur={save}
 				onKeyDown={handleKeyDown}
 				className={`${className ?? ""} bg-white/90 text-slate-900 border-2 border-blue-500 rounded px-2 py-1 outline-none w-full resize-y min-h-[60px]`}
-				rows={3}
+				rows={4}
 			/>
 		) : (
 			<input
@@ -252,13 +324,14 @@ export function EditableText({
 	}
 
 	if (!isAdmin) {
-		return <Tag className={className}>{currentText}</Tag>;
+		return <Tag className={className} style={multiline ? { whiteSpace: "pre-wrap" } : undefined}>{currentText}</Tag>;
 	}
 
 	return (
 		<Tag
 			className={`${className ?? ""} cursor-pointer relative group/editable ring-blue-400 hover:ring-2 rounded transition-all`}
 			onClick={startEditing}
+			style={multiline ? { whiteSpace: "pre-wrap" } : undefined}
 		>
 			{currentText}
 			<Pencil className="size-3 inline-block ml-1 opacity-0 group-hover/editable:opacity-70 text-blue-400 transition-opacity" />
@@ -370,6 +443,8 @@ export function EditableImage({
 	onSave,
 	className,
 	wrapperClassName,
+	optional = false,
+	label,
 }: {
 	id: string;
 	defaultSrc?: string;
@@ -379,6 +454,8 @@ export function EditableImage({
 	onSave: (id: string, value: string) => void;
 	className?: string;
 	wrapperClassName?: string;
+	optional?: boolean;
+	label?: string;
 }) {
 	const fileRef = useRef<HTMLInputElement>(null);
 	const [uploading, setUploading] = useState(false);
@@ -418,6 +495,27 @@ export function EditableImage({
 		if (fileRef.current) fileRef.current.value = "";
 	};
 
+	// Optional image: if no src, render nothing for non-admin; show upload button for admin
+	if (optional && !currentSrc) {
+		if (!isAdmin) return null;
+		return (
+			<div className="mb-4">
+				{label && <p className="text-xs text-slate-500 mb-1">{label}</p>}
+				<button
+					type="button"
+					onClick={() => fileRef.current?.click()}
+					disabled={uploading}
+					className="border-2 border-dashed border-blue-400 rounded-lg p-3 text-xs text-blue-600 flex items-center gap-2 hover:bg-blue-50 transition-colors w-full justify-center"
+				>
+					{uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+					{uploading ? "Uploading..." : "Add image (optional)"}
+				</button>
+				<input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+				{uploadError && <p className="text-xs text-red-600 mt-1">{uploadError}</p>}
+			</div>
+		);
+	}
+
 	return (
 		<div className={`relative group/img ${wrapperClassName ?? ""}`}>
 			{currentSrc ? (
@@ -429,6 +527,7 @@ export function EditableImage({
 			)}
 			{isAdmin && (
 				<>
+					{label && <p className="absolute top-1 left-1 text-[10px] text-white bg-black/50 rounded px-1">{label}</p>}
 					<div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
 						<button
 							type="button"
@@ -439,7 +538,7 @@ export function EditableImage({
 							{uploading ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-3" />}
 							{uploading ? "Uploading..." : "Upload"}
 						</button>
-						{isEdited && currentSrc && (
+						{(isEdited || (optional && currentSrc)) && (
 							<button
 								type="button"
 								onClick={handleRemove}
@@ -527,7 +626,7 @@ export function EditableColor({
 	);
 }
 
-/** Shorthand component that pulls from admin context automatically */
+/** Shorthand component that auto-wires admin context */
 export function E({
 	id,
 	children,
@@ -556,29 +655,374 @@ export function E({
 	);
 }
 
-/** Admin floating toolbar shown on all pages */
+// ---------- Section wrapper for show/hide + ordering ----------
+
+export function AdminSection({
+	sectionId,
+	children,
+	className,
+	style,
+}: {
+	sectionId: string;
+	children: ReactNode;
+	className?: string;
+	style?: CSSProperties;
+}) {
+	const { isAdmin, sections } = useAdmin();
+	const config = sections.find((s) => s.id === sectionId);
+
+	if (!config) return <section className={className} style={style}>{children}</section>;
+	if (!config.visible && !isAdmin) return null;
+
+	const sectionStyle: CSSProperties = {
+		...style,
+		...(config.bgColor ? { backgroundColor: config.bgColor } : {}),
+		...((!config.visible && isAdmin) ? { opacity: 0.4 } : {}),
+	};
+
+	return (
+		<section className={className} style={sectionStyle} data-section={sectionId}>
+			{!config.visible && isAdmin && (
+				<div className="text-center py-1 bg-orange-100 text-orange-700 text-xs font-medium">
+					<EyeOff className="size-3 inline mr-1" />Hidden section — only visible in admin mode
+				</div>
+			)}
+			{children}
+		</section>
+	);
+}
+
+// ---------- Section Controls Panel ----------
+
+function SectionControlPanel() {
+	const { sections, updateSections } = useAdmin();
+
+	const toggleVisibility = (sectionId: string) => {
+		const updated = sections.map((s) =>
+			s.id === sectionId ? { ...s, visible: !s.visible } : s,
+		);
+		updateSections(updated);
+	};
+
+	const moveUp = (idx: number) => {
+		if (idx === 0) return;
+		const updated = [...sections];
+		const tmp = updated[idx - 1];
+		updated[idx - 1] = { ...updated[idx], order: idx - 1 };
+		updated[idx] = { ...tmp, order: idx };
+		updateSections(updated);
+	};
+
+	const moveDown = (idx: number) => {
+		if (idx >= sections.length - 1) return;
+		const updated = [...sections];
+		const tmp = updated[idx + 1];
+		updated[idx + 1] = { ...updated[idx], order: idx + 1 };
+		updated[idx] = { ...tmp, order: idx };
+		updateSections(updated);
+	};
+
+	const changeBg = (sectionId: string, color: string) => {
+		const updated = sections.map((s) =>
+			s.id === sectionId ? { ...s, bgColor: color === "" ? undefined : color } : s,
+		);
+		updateSections(updated);
+	};
+
+	return (
+		<div className="space-y-1">
+			{sections.map((s, idx) => (
+				<div key={s.id} className="flex items-center gap-2 bg-slate-50 rounded px-2 py-1.5 text-xs">
+					<button type="button" onClick={() => toggleVisibility(s.id)} title={s.visible ? "Hide" : "Show"}>
+						{s.visible ? <Eye className="size-3.5 text-green-600" /> : <EyeOff className="size-3.5 text-slate-400" />}
+					</button>
+					<span className="flex-1 font-medium text-slate-700 truncate">{s.label}</span>
+					<input
+						type="color"
+						value={s.bgColor || "#ffffff"}
+						onChange={(e) => changeBg(s.id, e.target.value === "#ffffff" ? "" : e.target.value)}
+						className="size-5 rounded border cursor-pointer"
+						title="Background color"
+					/>
+					<button type="button" onClick={() => moveUp(idx)} disabled={idx === 0} className="disabled:opacity-30">
+						<ChevronUp className="size-3.5" />
+					</button>
+					<button type="button" onClick={() => moveDown(idx)} disabled={idx >= sections.length - 1} className="disabled:opacity-30">
+						<ChevronDown className="size-3.5" />
+					</button>
+				</div>
+			))}
+		</div>
+	);
+}
+
+// ---------- Content Map Panel ----------
+
+function ContentMapPanel() {
+	const { contentEdits, handleContentSave } = useAdmin();
+	const [search, setSearch] = useState("");
+	const [editingKey, setEditingKey] = useState<string | null>(null);
+	const [editDraft, setEditDraft] = useState("");
+
+	const filteredKeys = useMemo(() => {
+		const keys = Object.keys(contentEdits).filter((k) => k !== SECTION_CONFIG_KEY);
+		if (!search) return keys.sort();
+		const q = search.toLowerCase();
+		return keys.filter((k) => k.toLowerCase().includes(q) || contentEdits[k].toLowerCase().includes(q)).sort();
+	}, [contentEdits, search]);
+
+	const startEdit = (key: string) => {
+		setEditingKey(key);
+		setEditDraft(contentEdits[key]);
+	};
+
+	const saveEdit = () => {
+		if (editingKey) {
+			handleContentSave(editingKey, editDraft.trim());
+			setEditingKey(null);
+		}
+	};
+
+	const removeKey = (key: string) => {
+		handleContentSave(key, "");
+	};
+
+	return (
+		<div className="space-y-3">
+			<div className="relative">
+				<Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+				<input
+					type="text"
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+					placeholder="Search keys or values..."
+					className="w-full pl-8 pr-3 py-1.5 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
+				/>
+			</div>
+			<p className="text-xs text-slate-500">{filteredKeys.length} editable keys</p>
+			<div className="max-h-64 overflow-y-auto space-y-1">
+				{filteredKeys.map((key) => (
+					<div key={key} className="bg-slate-50 rounded px-2 py-1.5 text-xs group">
+						{editingKey === key ? (
+							<div className="space-y-1">
+								<p className="font-mono text-blue-600 text-[10px]">{key}</p>
+								<textarea
+									value={editDraft}
+									onChange={(e) => setEditDraft(e.target.value)}
+									className="w-full border rounded px-1.5 py-1 text-xs resize-y min-h-[40px] outline-none focus:ring-1 focus:ring-blue-400"
+									rows={2}
+								/>
+								<div className="flex gap-1">
+									<button type="button" onClick={saveEdit} className="text-green-600 hover:text-green-700 text-[10px] font-medium">Save</button>
+									<button type="button" onClick={() => setEditingKey(null)} className="text-slate-500 hover:text-slate-700 text-[10px]">Cancel</button>
+								</div>
+							</div>
+						) : (
+							<div className="flex items-start gap-1">
+								<div className="flex-1 min-w-0">
+									<p className="font-mono text-blue-600 text-[10px] truncate">{key}</p>
+									<p className="text-slate-600 truncate">{contentEdits[key]}</p>
+								</div>
+								<button
+									type="button"
+									onClick={() => startEdit(key)}
+									className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-600 hover:text-blue-700 shrink-0"
+								>
+									<Pencil className="size-3" />
+								</button>
+								<button
+									type="button"
+									onClick={() => removeKey(key)}
+									className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 shrink-0"
+								>
+									<Trash2 className="size-3" />
+								</button>
+							</div>
+						)}
+					</div>
+				))}
+				{filteredKeys.length === 0 && (
+					<p className="text-xs text-slate-400 text-center py-4">No editable keys found</p>
+				)}
+			</div>
+		</div>
+	);
+}
+
+// ---------- Danger Zone ----------
+
+function DangerZone() {
+	const { handleResetAllEdits, handleUndoLastChange, editCount } = useAdmin();
+	const [resetConfirmText, setResetConfirmText] = useState("");
+	const [showResetConfirm, setShowResetConfirm] = useState(false);
+	const [snapshots, setSnapshots] = useState<{ id: string; created_at: string; content: Record<string, string> }[]>([]);
+	const [showSnapshots, setShowSnapshots] = useState(false);
+	const [loadingSnapshots, setLoadingSnapshots] = useState(false);
+	const [undoing, setUndoing] = useState(false);
+	const [restoring, setRestoring] = useState(false);
+	const { contentEdits, handleContentSave } = useAdmin();
+
+	const handleUndo = async () => {
+		setUndoing(true);
+		await handleUndoLastChange();
+		setUndoing(false);
+	};
+
+	const loadSnapshots = async () => {
+		setLoadingSnapshots(true);
+		const snaps = await fetchSnapshots(10);
+		setSnapshots(snaps);
+		setLoadingSnapshots(false);
+		setShowSnapshots(true);
+	};
+
+	const handleRestore = async (content: Record<string, string>) => {
+		setRestoring(true);
+		// Apply the snapshot content
+		await restoreFromSnapshot(content);
+		// Update local state via content map
+		for (const key of Object.keys(contentEdits)) {
+			if (!(key in content)) {
+				handleContentSave(key, "");
+			}
+		}
+		for (const [key, val] of Object.entries(content)) {
+			handleContentSave(key, val);
+		}
+		setRestoring(false);
+		setShowSnapshots(false);
+	};
+
+	const handleReset = () => {
+		handleResetAllEdits();
+		setShowResetConfirm(false);
+		setResetConfirmText("");
+	};
+
+	const formatTimestamp = (ts: string) => {
+		const d = new Date(ts);
+		return d.toLocaleString("en-GB", {
+			day: "2-digit",
+			month: "short",
+			year: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+	};
+
+	return (
+		<div className="space-y-3 border-t border-red-200 pt-3 mt-3">
+			<h4 className="text-xs font-semibold text-red-600 flex items-center gap-1">
+				<AlertTriangle className="size-3" />
+				Danger Zone
+			</h4>
+
+			<div className="flex flex-col gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					className="w-full text-xs justify-start"
+					onClick={handleUndo}
+					disabled={undoing || editCount === 0}
+				>
+					<Undo2 className="size-3 mr-2" />
+					{undoing ? "Undoing..." : "Undo last change"}
+				</Button>
+
+				<Button
+					variant="outline"
+					size="sm"
+					className="w-full text-xs justify-start"
+					onClick={loadSnapshots}
+					disabled={loadingSnapshots}
+				>
+					<History className="size-3 mr-2" />
+					{loadingSnapshots ? "Loading..." : "Restore from backup"}
+				</Button>
+
+				{showSnapshots && (
+					<div className="border rounded-lg p-2 bg-slate-50 max-h-48 overflow-y-auto space-y-1">
+						{snapshots.length === 0 ? (
+							<p className="text-xs text-slate-400 text-center py-2">No backups found</p>
+						) : (
+							snapshots.map((snap) => (
+								<button
+									key={snap.id}
+									type="button"
+									onClick={() => handleRestore(snap.content)}
+									disabled={restoring}
+									className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-blue-50 flex items-center justify-between disabled:opacity-50"
+								>
+									<span className="text-slate-700">{formatTimestamp(snap.created_at)}</span>
+									<span className="text-slate-400">{Object.keys(snap.content).length} edits</span>
+								</button>
+							))
+						)}
+					</div>
+				)}
+
+				{!showResetConfirm ? (
+					<Button
+						variant="outline"
+						size="sm"
+						className="w-full text-xs justify-start text-red-600 border-red-200 hover:bg-red-50"
+						onClick={() => setShowResetConfirm(true)}
+						disabled={editCount === 0}
+					>
+						<RotateCcw className="size-3 mr-2" />
+						Reset all edits to defaults
+					</Button>
+				) : (
+					<div className="border-2 border-red-300 rounded-lg p-3 bg-red-50 space-y-2">
+						<p className="text-xs text-red-700 font-medium">
+							Type <span className="font-mono font-bold">RESET</span> to confirm deletion of all {editCount} edits:
+						</p>
+						<input
+							type="text"
+							value={resetConfirmText}
+							onChange={(e) => setResetConfirmText(e.target.value)}
+							placeholder="Type RESET"
+							className="w-full border border-red-300 rounded px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-red-400"
+						/>
+						<div className="flex gap-2">
+							<Button
+								variant="destructive"
+								size="sm"
+								className="text-xs flex-1"
+								disabled={resetConfirmText !== "RESET"}
+								onClick={handleReset}
+							>
+								Confirm Reset
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								className="text-xs"
+								onClick={() => { setShowResetConfirm(false); setResetConfirmText(""); }}
+							>
+								Cancel
+							</Button>
+						</div>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+// ---------- Admin Toolbar ----------
+
 export function AdminToolbar() {
-	const { isAdmin, editCount, handleResetAllEdits, handleAdminLogout } = useAdmin();
+	const { isAdmin, editCount, handleAdminLogout } = useAdmin();
 
 	if (!isAdmin) return null;
 
 	return (
 		<div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 items-end">
 			<div className="flex gap-2">
-				{editCount > 0 && (
-					<button
-						onClick={handleResetAllEdits}
-						className="bg-orange-600 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm hover:bg-orange-700 transition-colors"
-					>
-						<RotateCcw className="size-4" />
-						<span>
-							Reset {editCount} edit{editCount !== 1 ? "s" : ""}
-						</span>
-					</button>
-				)}
 				<div className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm">
 					<Pencil className="size-4" />
-					<span>Admin mode — edits save automatically</span>
+					<span>Admin mode{editCount > 0 ? ` — ${editCount} edits` : ""}</span>
 					<button onClick={handleAdminLogout} className="ml-2 hover:text-green-200">
 						<LogOut className="size-4" />
 					</button>
@@ -588,18 +1032,19 @@ export function AdminToolbar() {
 	);
 }
 
-/** Admin login dialog - place in footer or wherever needed */
+// ---------- Admin Login Dialog ----------
+
 export function AdminLoginDialog() {
 	const {
 		isAdmin,
 		editCount,
 		handleAdminLogin,
 		handleAdminLogout,
-		handleResetAllEdits,
 	} = useAdmin();
 	const [adminDialogOpen, setAdminDialogOpen] = useState(false);
 	const [adminPassword, setAdminPassword] = useState("");
 	const [adminLoginError, setAdminLoginError] = useState("");
+	const [activeTab, setActiveTab] = useState<"settings" | "sections" | "content-map">("settings");
 
 	const onLogin = () => {
 		const success = handleAdminLogin(adminPassword);
@@ -623,36 +1068,78 @@ export function AdminLoginDialog() {
 					<Lock className="size-4" />
 				</button>
 			</DialogTrigger>
-			<DialogContent className="max-w-sm">
+			<DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
 				{isAdmin ? (
 					<>
 						<DialogHeader>
 							<DialogTitle className="flex items-center gap-2">
 								<CheckCircle2 className="size-5 text-green-600" />
-								Admin Access Active
+								Admin Panel
 							</DialogTitle>
 						</DialogHeader>
-						<div className="space-y-4 pt-4">
-							<p className="text-sm text-slate-600">
-								You are logged in as admin. Click text to edit, hover links to change URLs, hover images to upload
-								new ones, and use color pickers to restyle sections. All changes save to Supabase automatically and appear instantly across all browsers.
-							</p>
+						<div className="space-y-4 pt-2">
+							{/* Tab navigation */}
+							<div className="flex gap-1 border-b">
+								<button
+									type="button"
+									onClick={() => setActiveTab("settings")}
+									className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${activeTab === "settings" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+								>
+									Settings
+								</button>
+								<button
+									type="button"
+									onClick={() => setActiveTab("sections")}
+									className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${activeTab === "sections" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+								>
+									Sections
+								</button>
+								<button
+									type="button"
+									onClick={() => setActiveTab("content-map")}
+									className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-1 ${activeTab === "content-map" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+								>
+									<Map className="size-3" />
+									Content Map
+								</button>
+							</div>
 
-							{editCount > 0 && (
-								<div className="border rounded-lg p-3">
-									<p className="text-xs text-slate-500 mb-2">
-										{editCount} edit{editCount !== 1 ? "s" : ""} saved
+							{activeTab === "settings" && (
+								<div className="space-y-3">
+									<p className="text-sm text-slate-600">
+										Click text to edit, hover links to change URLs, hover images to upload.
+										All changes save to Supabase automatically.
 									</p>
-									<Button onClick={handleResetAllEdits} variant="outline" size="sm" className="w-full">
-										<RotateCcw className="size-3 mr-2" />
-										Reset all edits to defaults
+
+									{editCount > 0 && (
+										<div className="border rounded-lg p-2">
+											<p className="text-xs text-slate-500">
+												{editCount} edit{editCount !== 1 ? "s" : ""} saved
+											</p>
+										</div>
+									)}
+
+									<DangerZone />
+
+									<Button onClick={onLogout} variant="outline" className="w-full">
+										<LogOut className="size-4 mr-2" />
+										Log Out
 									</Button>
 								</div>
 							)}
-							<Button onClick={onLogout} variant="outline" className="w-full">
-								<LogOut className="size-4 mr-2" />
-								Log Out
-							</Button>
+
+							{activeTab === "sections" && (
+								<div className="space-y-3">
+									<p className="text-xs text-slate-500">
+										Toggle visibility, reorder sections, and set background colors.
+									</p>
+									<SectionControlPanel />
+								</div>
+							)}
+
+							{activeTab === "content-map" && (
+								<ContentMapPanel />
+							)}
 						</div>
 					</>
 				) : (

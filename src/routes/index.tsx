@@ -38,7 +38,7 @@ import {
 	Loader2,
 } from "lucide-react";
 import { ContactQuoteORM, ContactQuoteServiceType, type ContactQuoteModel } from "@/sdk/database/orm/orm_contact_quote";
-import { useAdmin, E, EditableLink, EditableImage, EditableColor } from "@/lib/admin-context";
+import { useAdmin, E, EditableLink, EditableImage, EditableColor, AdminSection } from "@/lib/admin-context";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 
 export const Route = createFileRoute("/")({
@@ -58,6 +58,7 @@ type FormValues = z.infer<typeof formSchema>;
 const HERO_IMAGE_KEY = "lt-electrical-hero-image";
 
 function EICRGuideContent() {
+	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
 	return (
 		<div className="prose prose-lg max-w-none">
 			<DialogHeader>
@@ -70,6 +71,20 @@ function EICRGuideContent() {
 			</DialogHeader>
 
 			<div className="mt-6 space-y-6">
+				<EditableImage
+					id="modal-eicr-image"
+					alt="EICR Testing"
+					isAdmin={isAdmin}
+					contentEdits={contentEdits}
+					onSave={handleContentSave}
+					optional
+					label="Article image"
+					className="w-full rounded-lg object-cover max-h-64"
+					wrapperClassName="w-full rounded-lg overflow-hidden"
+				/>
+				{contentEdits["modal-eicr-image"] && (
+					<E id="modal-eicr-caption" as="p" className="text-sm text-slate-500 italic text-center -mt-4">Image caption (click to edit)</E>
+				)}
 				<p className="text-base text-slate-700 leading-relaxed">
 					Electrical safety is something many property owners don't think about until there's a problem. An Electrical Installation Condition Report (EICR) is designed to identify issues before they become dangerous or expensive.
 				</p>
@@ -300,6 +315,7 @@ function EICRGuideContent() {
 }
 
 function PATTestingGuideContent() {
+	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
 	return (
 		<div className="prose prose-lg max-w-none">
 			<DialogHeader>
@@ -312,6 +328,20 @@ function PATTestingGuideContent() {
 			</DialogHeader>
 
 			<div className="mt-6 space-y-6">
+				<EditableImage
+					id="modal-pat-image"
+					alt="PAT Testing"
+					isAdmin={isAdmin}
+					contentEdits={contentEdits}
+					onSave={handleContentSave}
+					optional
+					label="Article image"
+					className="w-full rounded-lg object-cover max-h-64"
+					wrapperClassName="w-full rounded-lg overflow-hidden"
+				/>
+				{contentEdits["modal-pat-image"] && (
+					<E id="modal-pat-caption" as="p" className="text-sm text-slate-500 italic text-center -mt-4">Image caption (click to edit)</E>
+				)}
 				<p className="text-base text-slate-700 leading-relaxed">
 					If you run a business, office, shop or community building, you're responsible for making sure electrical equipment is safe. One of the simplest ways to do this is through PAT testing.
 				</p>
@@ -489,6 +519,7 @@ function PATTestingGuideContent() {
 }
 
 function DefibrillatorArticleContent() {
+	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
 	return (
 		<div className="prose prose-lg max-w-none">
 			<DialogHeader>
@@ -501,6 +532,20 @@ function DefibrillatorArticleContent() {
 			</DialogHeader>
 
 			<div className="mt-6 space-y-6">
+				<EditableImage
+					id="modal-defib-image"
+					alt="Community Defibrillator"
+					isAdmin={isAdmin}
+					contentEdits={contentEdits}
+					onSave={handleContentSave}
+					optional
+					label="Article image"
+					className="w-full rounded-lg object-cover max-h-64"
+					wrapperClassName="w-full rounded-lg overflow-hidden"
+				/>
+				{contentEdits["modal-defib-image"] && (
+					<E id="modal-defib-caption" as="p" className="text-sm text-slate-500 italic text-center -mt-4">Image caption (click to edit)</E>
+				)}
 				<p className="text-base text-slate-700 leading-relaxed">
 					At LT Electrical Services, we believe being part of the community means more than just carrying out electrical work. It means giving something back.
 				</p>
@@ -760,7 +805,7 @@ function App() {
 				</div>
 			</EditableColor>
 
-			<section className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white py-20 md:py-32 overflow-hidden">
+			<AdminSection sectionId="hero" className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white py-20 md:py-32 overflow-hidden">
 				<div className="container mx-auto px-4">
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 						<div className="text-center lg:text-left">
@@ -866,9 +911,9 @@ function App() {
 						</div>
 					</div>
 				</div>
-			</section>
+			</AdminSection>
 
-			<section className="py-12 bg-white border-b">
+			<AdminSection sectionId="trust" className="py-12 bg-white border-b">
 				<div className="container mx-auto px-4">
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
 						<div className="flex flex-col items-center text-center gap-3">
@@ -901,9 +946,9 @@ function App() {
 						</div>
 					</div>
 				</div>
-			</section>
+			</AdminSection>
 
-			<section className="py-16 bg-slate-50">
+			<AdminSection sectionId="services" className="py-16 bg-slate-50">
 				<div className="container mx-auto px-4">
 					<E id="services-heading" as="h2" className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">Our Services</E>
 					<E id="services-sub" as="p" className="text-center text-slate-600 mb-12 max-w-2xl mx-auto">Comprehensive electrical solutions for homes and businesses across Lincolnshire and Cambridgeshire</E>
@@ -1000,9 +1045,9 @@ function App() {
 						</Card>
 					</div>
 				</div>
-			</section>
+			</AdminSection>
 
-			<section className="py-16 bg-white">
+			<AdminSection sectionId="why" className="py-16 bg-white">
 				<div className="container mx-auto px-4">
 					<E id="why-heading" as="h2" className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">Why Choose Us</E>
 					<E id="why-sub" as="p" className="text-center text-slate-600 mb-12 max-w-2xl mx-auto">Local expertise, professional service, and complete peace of mind</E>
@@ -1061,9 +1106,9 @@ function App() {
 						</div>
 					</div>
 				</div>
-			</section>
+			</AdminSection>
 
-			<section className="py-16 bg-slate-50">
+			<AdminSection sectionId="areas" className="py-16 bg-slate-50">
 				<div className="container mx-auto px-4">
 					<E id="areas-heading" as="h2" className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">Areas We Cover</E>
 					<E id="areas-sub" as="p" className="text-center text-slate-600 mb-12 max-w-2xl mx-auto">Providing professional electrical services throughout Lincolnshire and Cambridgeshire</E>
@@ -1075,9 +1120,9 @@ function App() {
 						))}
 					</div>
 				</div>
-			</section>
+			</AdminSection>
 
-			<section className="py-16 bg-white">
+			<AdminSection sectionId="projects" className="py-16 bg-white">
 				<div className="container mx-auto px-4">
 					<E id="projects-heading" as="h2" className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">Recent Projects</E>
 					<E id="projects-sub" as="p" className="text-center text-slate-600 mb-12 max-w-2xl mx-auto">See some of our recent electrical work across the region</E>
@@ -1135,9 +1180,9 @@ function App() {
 						</Card>
 					</div>
 				</div>
-			</section>
+			</AdminSection>
 
-			<section className="py-16 bg-slate-50">
+			<AdminSection sectionId="testimonials" className="py-16 bg-slate-50">
 				<div className="container mx-auto px-4">
 					<E id="testimonials-heading" as="h2" className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">What Our Customers Say</E>
 					<E id="testimonials-sub" as="p" className="text-center text-slate-600 mb-12 max-w-2xl mx-auto">Don't just take our word for it - hear from our satisfied customers</E>
@@ -1177,20 +1222,22 @@ function App() {
 						</Card>
 					</div>
 				</div>
-			</section>
+			</AdminSection>
 
-			<EditableColor id="cta-bg-color" defaultColor="#2563eb" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="py-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-				<div className="container mx-auto px-4 text-center">
-					<E id="cta-heading" as="h2" className="text-3xl md:text-4xl font-bold mb-4">Need a reliable electrician?</E>
-					<E id="cta-sub" as="p" className="text-xl mb-6">Get your free quote today</E>
-					<Button onClick={scrollToContact} size="lg" className="bg-white text-blue-600 hover:bg-slate-100 text-lg px-8">
-						<E id="cta-btn-text" as="span">Request Free Quote</E>
-					</Button>
-				</div>
-			</EditableColor>
+			<AdminSection sectionId="cta">
+				<EditableColor id="cta-bg-color" defaultColor="#2563eb" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="py-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+					<div className="container mx-auto px-4 text-center">
+						<E id="cta-heading" as="h2" className="text-3xl md:text-4xl font-bold mb-4">Need a reliable electrician?</E>
+						<E id="cta-sub" as="p" className="text-xl mb-6">Get your free quote today</E>
+						<Button onClick={scrollToContact} size="lg" className="bg-white text-blue-600 hover:bg-slate-100 text-lg px-8">
+							<E id="cta-btn-text" as="span">Request Free Quote</E>
+						</Button>
+					</div>
+				</EditableColor>
+			</AdminSection>
 
-			<section id="contact-form" className="py-16 bg-white">
-				<div className="container mx-auto px-4 max-w-2xl">
+			<AdminSection sectionId="contact" className="py-16 bg-white">
+				<div id="contact-form" className="container mx-auto px-4 max-w-2xl">
 					<E id="contact-heading" as="h2" className="text-3xl md:text-4xl font-bold text-center mb-4 text-slate-900">Get Your Free Quote</E>
 					<E id="contact-sub" as="p" className="text-center text-slate-600 mb-8">Fill in the form below and we'll get back to you as soon as possible</E>
 
@@ -1291,7 +1338,7 @@ function App() {
 						</CardContent>
 					</Card>
 				</div>
-			</section>
+			</AdminSection>
 
 			<footer className="bg-slate-900 text-white py-12">
 				<div className="container mx-auto px-4">

@@ -1,6 +1,6 @@
 {
   "id": "102019c1341eb64763ab1be2109ef48dc96",
-  "version": "102019c85f0062b736c8948a06a59946fcf",
+  "version": "102019c9a5d2ca17432ab2a2cedc2450fe2",
   "schema": {
     "name": "contact_quote",
     "description": "Stores form submissions from customers requesting quotes for electrical services",
@@ -158,7 +158,7 @@
     ]
   },
   "task": {
-    "id": "699b0b1b6f76a15aba312f41",
+    "id": "69a05938b650c7dc9f0aa415",
     "root": "697dc27eb1f12e575600d68f",
     "project": "697dc27eb1f12e575600d68e",
     "user": "b841e340-2001-7005-fde8-27c1f6ed0b84"

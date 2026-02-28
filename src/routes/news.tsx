@@ -21,7 +21,7 @@ import {
 	ArrowLeft,
 	ChevronRight,
 } from "lucide-react";
-import { useAdmin, E, EditableLink, EditableColor } from "@/lib/admin-context";
+import { useAdmin, E, EditableLink, EditableColor, EditableImage } from "@/lib/admin-context";
 
 export const Route = createFileRoute("/news")({
 	component: NewsPage,
@@ -255,6 +255,21 @@ function RhysIrwinArticle() {
 				LT Electrical Services celebrates sponsoring Rhys Irwin and Performance15 Kawasaki's first SuperSport championship victory in 2025 after years of heartbreak for Team Principle Michael Biddulph.
 			</E>
 
+			<EditableImage
+				id="news-rhys-image"
+				alt="Rhys Irwin Championship"
+				isAdmin={isAdmin}
+				contentEdits={contentEdits}
+				onSave={handleContentSave}
+				optional
+				label="Article image"
+				className="w-full rounded-lg object-cover max-h-64"
+				wrapperClassName="w-full rounded-lg overflow-hidden mb-4"
+			/>
+			{contentEdits["news-rhys-image"] && (
+				<E id="news-rhys-caption" as="p" className="text-sm text-slate-500 italic text-center mb-6">Image caption (click to edit)</E>
+			)}
+
 			<div className="bg-amber-50 border-l-4 border-amber-500 p-4 my-6">
 				<div className="flex items-start gap-3">
 					<Trophy className="size-6 text-amber-500 shrink-0 mt-1" />
@@ -423,6 +438,20 @@ function EICRArticle() {
 			</E>
 
 			<div className="space-y-6">
+				<EditableImage
+					id="news-eicr-image"
+					alt="EICR Testing"
+					isAdmin={isAdmin}
+					contentEdits={contentEdits}
+					onSave={handleContentSave}
+					optional
+					label="Article image"
+					className="w-full rounded-lg object-cover max-h-64"
+					wrapperClassName="w-full rounded-lg overflow-hidden"
+				/>
+				{contentEdits["news-eicr-image"] && (
+					<E id="news-eicr-caption" as="p" className="text-sm text-slate-500 italic text-center -mt-4">Image caption (click to edit)</E>
+				)}
 				<E id="news-eicr-intro1" as="p" className="text-base text-slate-700 leading-relaxed" multiline>
 					Electrical safety is something many property owners don't think about until there's a problem. An Electrical Installation Condition Report (EICR) is designed to identify issues before they become dangerous or expensive.
 				</E>
@@ -658,6 +687,20 @@ function PATTestingArticle() {
 			</E>
 
 			<div className="space-y-6">
+				<EditableImage
+					id="news-pat-image"
+					alt="PAT Testing"
+					isAdmin={isAdmin}
+					contentEdits={contentEdits}
+					onSave={handleContentSave}
+					optional
+					label="Article image"
+					className="w-full rounded-lg object-cover max-h-64"
+					wrapperClassName="w-full rounded-lg overflow-hidden"
+				/>
+				{contentEdits["news-pat-image"] && (
+					<E id="news-pat-caption" as="p" className="text-sm text-slate-500 italic text-center -mt-4">Image caption (click to edit)</E>
+				)}
 				<E id="news-pat-intro1" as="p" className="text-base text-slate-700 leading-relaxed" multiline>
 					If you run a business, office, shop or community building, you're responsible for making sure electrical equipment is safe. One of the simplest ways to do this is through PAT testing.
 				</E>
@@ -863,6 +906,20 @@ function DefibrillatorArticle() {
 			</E>
 
 			<div className="space-y-6">
+				<EditableImage
+					id="news-defib-image"
+					alt="Community Defibrillator"
+					isAdmin={isAdmin}
+					contentEdits={contentEdits}
+					onSave={handleContentSave}
+					optional
+					label="Article image"
+					className="w-full rounded-lg object-cover max-h-64"
+					wrapperClassName="w-full rounded-lg overflow-hidden"
+				/>
+				{contentEdits["news-defib-image"] && (
+					<E id="news-defib-caption" as="p" className="text-sm text-slate-500 italic text-center -mt-4">Image caption (click to edit)</E>
+				)}
 				<E id="news-defib-intro1" as="p" className="text-base text-slate-700 leading-relaxed" multiline>
 					At LT Electrical Services, we believe being part of the community means more than just carrying out electrical work. It means giving something back.
 				</E>

@@ -32,10 +32,65 @@ export async function fetchPublishedContent(): Promise<Record<string, string> | 
 
 /**
  * Save content edits directly to Supabase via upsert.
- * Uses the anon key — make sure your RLS policy allows writes
- * for authenticated admins, or disable RLS on the content_edits table.
+ * Also inserts a snapshot row for backup/undo functionality.
  */
 export async function saveContentToServer(
+	content: Record<string, string>,
+): Promise<boolean> {
+	if (!supabase) return false;
+
+	try {
+		const { error } = await supabase
+			.from("content_edits")
+			.upsert({
+				id: ROW_ID,
+				content,
+				updated_at: new Date().toISOString(),
+			}, { onConflict: "id" });
+
+		if (error) return false;
+
+		// Insert snapshot for undo/restore functionality
+		await supabase
+			.from("content_edit_snapshots")
+			.insert({
+				content,
+				created_at: new Date().toISOString(),
+			});
+
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Fetch the last N snapshots for restore functionality.
+ */
+export async function fetchSnapshots(
+	limit = 10,
+): Promise<{ id: string; created_at: string; content: Record<string, string> }[]> {
+	if (!supabase) return [];
+
+	try {
+		const { data, error } = await supabase
+			.from("content_edit_snapshots")
+			.select("id, created_at, content")
+			.order("created_at", { ascending: false })
+			.limit(limit);
+
+		if (error || !data) return [];
+		return data as { id: string; created_at: string; content: Record<string, string> }[];
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Restore content from a specific snapshot (by applying it as the active content).
+ * Does NOT create a new snapshot — caller should call saveContentToServer if needed.
+ */
+export async function restoreFromSnapshot(
 	content: Record<string, string>,
 ): Promise<boolean> {
 	if (!supabase) return false;

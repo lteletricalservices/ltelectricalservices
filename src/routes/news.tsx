@@ -20,8 +20,11 @@ import {
 	Trophy,
 	ArrowLeft,
 	ChevronRight,
+	Upload,
+	Trash2,
 } from "lucide-react";
 import { useAdmin, E, EditableLink, EditableColor, EditableImage } from "@/lib/admin-context";
+import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 
 export const Route = createFileRoute("/news")({
 	component: NewsPage,
@@ -186,35 +189,146 @@ function NewsPage() {
 			<section className="py-16">
 				<div className="container mx-auto px-4 max-w-5xl">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-						{articles.map((article) => (
-							<Card
-								key={article.id}
-								className="hover:shadow-lg transition-shadow cursor-pointer group"
-								onClick={() => setActiveArticle(article.id)}
-							>
-								<div className={`h-48 bg-gradient-to-br ${article.iconBg} rounded-t-xl flex items-center justify-center`}>
-									<article.icon className="size-20 text-slate-600 opacity-40 group-hover:opacity-60 transition-opacity" />
-								</div>
-								<CardHeader>
-									<div className="flex items-center gap-2 mb-2">
-										<span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${article.categoryColor}`}>
-											{article.category}
+						{articles.map((article) => {
+							const thumbnailKey = `articles.${article.id}.thumbnailUrl`;
+							const thumbnailUrl = contentEdits[thumbnailKey];
+							return (
+								<Card
+									key={article.id}
+									className="hover:shadow-lg transition-shadow cursor-pointer group"
+									onClick={(e) => {
+										if ((e.target as HTMLElement).closest("[data-slot='thumbnail-admin']")) return;
+										setActiveArticle(article.id);
+									}}
+								>
+									{thumbnailUrl ? (
+										<div className="relative group/img rounded-t-xl overflow-hidden">
+											<img
+												src={thumbnailUrl}
+												alt={article.title}
+												className="w-full aspect-video object-cover"
+												onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+											/>
+											{isAdmin && (
+												<div data-slot="thumbnail-admin" className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
+													<button
+														type="button"
+														onClick={(e) => {
+															e.stopPropagation();
+															const input = document.getElementById(`thumb-input-${article.id}`) as HTMLInputElement;
+															input?.click();
+														}}
+														className="bg-blue-600 text-white rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-lg"
+													>
+														<Upload className="size-3" /> Replace
+													</button>
+													<button
+														type="button"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleContentSave(thumbnailKey, "");
+														}}
+														className="bg-red-600 text-white rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-lg"
+													>
+														<Trash2 className="size-3" /> Remove
+													</button>
+													<input
+														id={`thumb-input-${article.id}`}
+														type="file"
+														accept="image/*"
+														className="hidden"
+														onChange={async (e) => {
+															const file = e.target.files?.[0];
+															if (!file || !file.type.startsWith("image/")) return;
+															if (isCloudinaryConfigured()) {
+																try {
+																	const url = await uploadToCloudinary(file);
+																	handleContentSave(thumbnailKey, url);
+																} catch (err) {
+																	console.error("Thumbnail upload failed:", err);
+																}
+															} else {
+																const reader = new FileReader();
+																reader.onload = (ev) => {
+																	handleContentSave(thumbnailKey, ev.target?.result as string);
+																};
+																reader.readAsDataURL(file);
+															}
+														}}
+													/>
+												</div>
+											)}
+										</div>
+									) : (
+										<div className="relative group/img rounded-t-xl overflow-hidden">
+											<div className={`aspect-video bg-gradient-to-br ${article.iconBg} flex items-center justify-center`}>
+												<article.icon className="size-20 text-slate-600 opacity-40 group-hover:opacity-60 transition-opacity" />
+											</div>
+											{isAdmin && (
+												<div data-slot="thumbnail-admin" className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
+													<button
+														type="button"
+														onClick={(e) => {
+															e.stopPropagation();
+															const input = document.getElementById(`thumb-input-${article.id}`) as HTMLInputElement;
+															input?.click();
+														}}
+														className="bg-blue-600 text-white rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-lg"
+													>
+														<Upload className="size-3" /> Upload
+													</button>
+													<input
+														id={`thumb-input-${article.id}`}
+														type="file"
+														accept="image/*"
+														className="hidden"
+														onChange={async (e) => {
+															const file = e.target.files?.[0];
+															if (!file || !file.type.startsWith("image/")) return;
+															if (isCloudinaryConfigured()) {
+																try {
+																	const url = await uploadToCloudinary(file);
+																	handleContentSave(thumbnailKey, url);
+																} catch (err) {
+																	console.error("Thumbnail upload failed:", err);
+																}
+															} else {
+																const reader = new FileReader();
+																reader.onload = (ev) => {
+																	handleContentSave(thumbnailKey, ev.target?.result as string);
+																};
+																reader.readAsDataURL(file);
+															}
+														}}
+													/>
+												</div>
+											)}
+											{isAdmin && (
+												<p className="absolute top-1 left-1 text-[10px] text-white bg-black/50 rounded px-1">Article thumbnail</p>
+											)}
+										</div>
+									)}
+									<CardHeader>
+										<div className="flex items-center gap-2 mb-2">
+											<span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${article.categoryColor}`}>
+												{article.category}
+											</span>
+										</div>
+										<CardTitle className="group-hover:text-blue-600 transition-colors">
+											<E id={article.titleId} as="span">{article.title}</E>
+										</CardTitle>
+										<CardDescription>
+											<E id={article.descId} as="span">{article.description}</E>
+										</CardDescription>
+									</CardHeader>
+									<CardContent>
+										<span className="text-blue-600 font-medium text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+											Read article <ChevronRight className="size-4" />
 										</span>
-									</div>
-									<CardTitle className="group-hover:text-blue-600 transition-colors">
-										<E id={article.titleId} as="span">{article.title}</E>
-									</CardTitle>
-									<CardDescription>
-										<E id={article.descId} as="span">{article.description}</E>
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<span className="text-blue-600 font-medium text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-										Read article <ChevronRight className="size-4" />
-									</span>
-								</CardContent>
-							</Card>
-						))}
+									</CardContent>
+								</Card>
+							);
+						})}
 					</div>
 				</div>
 			</section>

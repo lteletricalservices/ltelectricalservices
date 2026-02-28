@@ -273,14 +273,14 @@ export function EditableText({
 	}, [editing]);
 
 	const save = useCallback(() => {
-		const trimmed = draft.trim();
-		if (trimmed && trimmed !== defaultText) {
-			onSave(id, trimmed);
-		} else if (trimmed === defaultText) {
+		const value = multiline ? draft : draft.trim();
+		if (value && value !== defaultText) {
+			onSave(id, value);
+		} else if (value === defaultText || value === "") {
 			onSave(id, "");
 		}
 		setEditing(false);
-	}, [draft, defaultText, id, onSave]);
+	}, [draft, defaultText, id, onSave, multiline]);
 
 	const cancel = useCallback(() => {
 		setEditing(false);

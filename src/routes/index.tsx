@@ -38,7 +38,6 @@ import {
 	Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ContactQuoteORM, ContactQuoteServiceType, type ContactQuoteModel } from "@/sdk/database/orm/orm_contact_quote";
 import { useAdmin, E, EIcon, EditableIcon, EditableLink, EditableImage, EditableColor, AdminSection } from "@/lib/admin-context";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 
@@ -650,33 +649,7 @@ function App() {
 		setIsSubmitting(true);
 		setSubmitStatus("idle");
 		try {
-			const orm = ContactQuoteORM.getInstance();
-
-			const serviceTypeMap: Record<string, ContactQuoteServiceType> = {
-				"Domestic Electrical": ContactQuoteServiceType.DomesticElectrical,
-				"Commercial Electrical": ContactQuoteServiceType.CommercialElectrical,
-				"Emergency Callouts": ContactQuoteServiceType.EmergencyCallouts,
-				"EICR & Testing": ContactQuoteServiceType.EICRTesting,
-				"EV Charger Installation": ContactQuoteServiceType.EVChargerInstallation,
-				"Fire & Safety Systems": ContactQuoteServiceType.FireSafetySystems,
-				"Other": ContactQuoteServiceType.Other,
-			};
-
-			const contactQuote: Partial<ContactQuoteModel> = {
-				name: values.name,
-				email: values.email,
-				phone: values.phone,
-				postcode: values.postcode || null,
-				service_type: serviceTypeMap[values.service_type] || ContactQuoteServiceType.Unspecified,
-				message: values.message,
-				page_url: window.location.href,
-				status: "new",
-			};
-
-			await orm.insertContactQuote([contactQuote as ContactQuoteModel]);
-
-			// Send email notification via Resend API route
-			fetch("/api/quote-request", {
+			const res = await fetch("/api/quote-request", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -687,9 +660,13 @@ function App() {
 					serviceType: values.service_type,
 					message: values.message,
 				}),
-			}).catch(() => {
-				console.warn("Email notification failed — enquiry saved to database");
 			});
+
+			const data = await res.json().catch(() => ({}));
+
+			if (!res.ok) {
+				throw new Error(data?.error || "Failed to submit");
+			}
 
 			setSubmitStatus("success");
 			toast.success("Thanks — your quote request has been sent.");

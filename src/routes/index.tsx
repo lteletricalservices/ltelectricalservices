@@ -1022,7 +1022,17 @@ function App() {
 			<EditableColor id="header-bg-color" defaultColor="#0f172a" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="bg-slate-900 text-white py-4 sticky top-0 z-50 shadow-md">
 				<div className="container mx-auto px-4 flex justify-between items-center">
 					<div className="flex items-center gap-2">
-						<EIcon id="header-logo-icon" defaultIcon="zap" className="size-8 text-blue-400" />
+						<EditableImage
+							id="header-logo-image"
+							alt="LT Electrical Services logo"
+							isAdmin={isAdmin}
+							contentEdits={contentEdits}
+							onSave={handleContentSave}
+							optional
+							label="Logo"
+							className="h-8 w-auto object-contain"
+							wrapperClassName="shrink-0"
+						/>
 						<E id="header-name" as="span" className="text-xl font-bold">LT Electrical Services</E>
 					</div>
 					<div className="flex items-center gap-6">
@@ -1624,7 +1634,17 @@ function App() {
 					<div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
 						<div>
 							<div className="flex items-center gap-2 mb-4">
-								<EIcon id="footer-logo-icon" defaultIcon="zap" className="size-8 text-blue-400" />
+								<EditableImage
+									id="footer-logo-image"
+									alt="LT Electrical Services logo"
+									isAdmin={isAdmin}
+									contentEdits={contentEdits}
+									onSave={handleContentSave}
+									optional
+									label="Footer logo"
+									className="h-8 w-auto object-contain"
+									wrapperClassName="shrink-0"
+								/>
 								<E id="footer-name" as="span" className="text-xl font-bold">LT Electrical</E>
 							</div>
 							<E id="footer-desc" as="p" className="text-slate-400">Professional electrical services across Lincolnshire and Cambridgeshire</E>

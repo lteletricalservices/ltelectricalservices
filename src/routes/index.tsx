@@ -36,6 +36,7 @@ import {
 	Upload,
 	Trash2,
 	Loader2,
+	Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAdmin, E, EIcon, EditableIcon, EditableLink, EditableImage, EditableColor, AdminSection } from "@/lib/admin-context";
@@ -57,6 +58,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const HERO_IMAGE_KEY = "lt-electrical-hero-image";
+const HERO_BG_COLOR_KEY = "hero-image-bg-color";
+const DEFAULT_HERO_BG = "#2563eb";
 
 function EICRGuideContent() {
 	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
@@ -271,6 +274,199 @@ function EICRGuideContent() {
 						<EditableLink id="modal-eicr-cta-email" defaultHref="mailto:admin@ltelectricalservices.co.uk" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/30 px-4 py-2 rounded-lg font-semibold text-sm transition-colors">
 							<Mail className="size-4" />
 							<E id="modal-eicr-cta-email-text" as="span">Email Us</E>
+						</EditableLink>
+					</div>
+				</EditableColor>
+			</div>
+		</div>
+	);
+}
+
+function CommercialEICRGuideContent() {
+	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
+	return (
+		<div className="prose prose-lg max-w-none">
+			<DialogHeader>
+				<DialogTitle className="text-3xl font-bold text-slate-900">
+					<E id="modal-ceicr-title" as="span">Commercial EICRs & Fixed Wire Testing in Lincolnshire</E>
+				</DialogTitle>
+				<E id="modal-ceicr-subtitle" as="p" className="text-lg text-slate-600 mt-2" multiline>
+					A guide for business owners, facility managers, and commercial property landlords across Spalding, Peterborough and surrounding areas.
+				</E>
+			</DialogHeader>
+
+			<div className="mt-6 space-y-6">
+				<EditableImage
+					id="modal-ceicr-image"
+					alt="Commercial EICR Testing"
+					isAdmin={isAdmin}
+					contentEdits={contentEdits}
+					onSave={handleContentSave}
+					optional
+					label="Article image"
+					className="w-full rounded-lg object-cover max-h-64"
+					wrapperClassName="w-full rounded-lg overflow-hidden"
+				/>
+				{contentEdits["modal-ceicr-image"] && (
+					<E id="modal-ceicr-caption" as="p" className="text-sm text-slate-500 italic text-center -mt-4">Image caption (click to edit)</E>
+				)}
+				<E id="modal-ceicr-intro1" as="p" className="text-base text-slate-700 leading-relaxed" multiline>
+					Commercial electrical installations carry higher risks than domestic ones due to greater usage, more complex systems, and the number of people who may be affected. Regular fixed wire testing is essential for any business premises.
+				</E>
+
+				<E id="modal-ceicr-intro2" as="p" className="text-base text-slate-700 leading-relaxed" multiline>
+					LT Electrical Services carries out commercial EICRs and fixed wire testing for offices, shops, factories, restaurants, warehouses, community buildings and more across Spalding, Peterborough, Bourne, Holbeach and the wider Lincolnshire and Cambridgeshire region.
+				</E>
+
+				<div className="bg-blue-50 border-l-4 border-blue-600 p-4 my-6">
+					<div className="flex items-start gap-3">
+						<Building2 className="size-6 text-blue-600 shrink-0 mt-1" />
+						<div>
+							<E id="modal-ceicr-callout-title" as="h3" className="font-semibold text-base text-slate-900 mb-2">Quick Contact</E>
+							<E id="modal-ceicr-callout-body" as="p" className="text-sm text-slate-700 mb-2" multiline>Need a commercial EICR? Get in touch today for a competitive quote.</E>
+							<div className="flex flex-col gap-1 text-sm text-slate-700">
+								<EditableLink id="modal-ceicr-phone-link" defaultHref="tel:01775710743" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="flex items-center gap-2 hover:text-blue-600">
+									<Phone className="size-3" />
+									<E id="modal-ceicr-phone-label" as="span">01775 710743</E>
+								</EditableLink>
+								<EditableLink id="modal-ceicr-email-link" defaultHref="mailto:admin@ltelectricalservices.co.uk" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="flex items-center gap-2 hover:text-blue-600">
+									<Mail className="size-3" />
+									<E id="modal-ceicr-email-label" as="span">admin@ltelectricalservices.co.uk</E>
+								</EditableLink>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<E id="modal-ceicr-h2-what" as="h2" className="text-2xl font-bold text-slate-900 mt-8">What is a commercial EICR?</E>
+				<E id="modal-ceicr-what-intro" as="p" className="text-base text-slate-700" multiline>
+					A commercial Electrical Installation Condition Report (EICR), also known as fixed wire testing, is a thorough inspection of the permanent electrical wiring and systems in a commercial building. It covers:
+				</E>
+
+				<ul className="space-y-2">
+					{[
+						{ id: "modal-ceicr-check-0", text: "Three-phase and single-phase distribution systems" },
+						{ id: "modal-ceicr-check-1", text: "Distribution boards and sub-boards" },
+						{ id: "modal-ceicr-check-2", text: "Lighting circuits and emergency lighting" },
+						{ id: "modal-ceicr-check-3", text: "Socket outlets and fixed equipment connections" },
+						{ id: "modal-ceicr-check-4", text: "Earthing and bonding arrangements" },
+						{ id: "modal-ceicr-check-5", text: "Fire alarm and safety system wiring" },
+					].map((item) => (
+						<li key={item.id} className="flex items-start gap-2">
+							<CheckCircle2 className="size-5 text-green-600 shrink-0 mt-0.5" />
+							<E id={item.id} as="span" className="text-base text-slate-700">{item.text}</E>
+						</li>
+					))}
+				</ul>
+
+				<E id="modal-ceicr-h2-legal" as="h2" className="text-2xl font-bold text-slate-900 mt-8">Legal requirements for businesses</E>
+				<E id="modal-ceicr-legal-intro" as="p" className="text-base text-slate-700" multiline>
+					Under the Electricity at Work Regulations 1989 and the Health and Safety at Work Act 1974, businesses have a legal duty to ensure their electrical installations are safe. A commercial EICR provides documented proof of compliance.
+				</E>
+
+				<div className="bg-orange-50 border-l-4 border-orange-500 p-4 my-6">
+					<div className="flex items-start gap-3">
+						<AlertCircle className="size-6 text-orange-500 shrink-0 mt-1" />
+						<div>
+							<E id="modal-ceicr-warning-title" as="h3" className="font-semibold text-base text-slate-900 mb-1">Important</E>
+							<E id="modal-ceicr-warning-body" as="p" className="text-sm text-slate-700" multiline>Failure to maintain electrical safety can result in prosecution, insurance invalidation, and liability for injury or damage. Regular testing protects your business and your people.</E>
+						</div>
+					</div>
+				</div>
+
+				<E id="modal-ceicr-h2-freq" as="h2" className="text-2xl font-bold text-slate-900 mt-8">How often is testing required?</E>
+				<E id="modal-ceicr-freq-intro" as="p" className="text-base text-slate-700">The recommended frequency depends on the type of premises:</E>
+
+				<div className="overflow-hidden rounded-lg border">
+					<table className="w-full text-sm">
+						<thead>
+							<tr className="bg-slate-100">
+								<th className="text-left p-3 font-semibold text-slate-900">Premises Type</th>
+								<th className="text-left p-3 font-semibold text-slate-900">Recommended Frequency</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr className="border-t">
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-env-0" as="span">Offices and shops</E></td>
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-freq-0" as="span">Every 5 years</E></td>
+							</tr>
+							<tr className="border-t bg-slate-50">
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-env-1" as="span">Restaurants and takeaways</E></td>
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-freq-1" as="span">Every 3–5 years</E></td>
+							</tr>
+							<tr className="border-t">
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-env-2" as="span">Industrial and manufacturing</E></td>
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-freq-2" as="span">Every 3 years</E></td>
+							</tr>
+							<tr className="border-t bg-slate-50">
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-env-3" as="span">Community halls and churches</E></td>
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-freq-3" as="span">Every 5 years</E></td>
+							</tr>
+							<tr className="border-t">
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-env-4" as="span">Hotels and guest houses</E></td>
+								<td className="p-3 text-slate-700"><E id="modal-ceicr-table-freq-4" as="span">Every 5 years</E></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<E id="modal-ceicr-h2-process" as="h2" className="text-2xl font-bold text-slate-900 mt-8">What does the process involve?</E>
+				<E id="modal-ceicr-process-intro" as="p" className="text-base text-slate-700">Our qualified 2391 electrician will:</E>
+
+				<div className="bg-slate-50 rounded-lg p-4 space-y-3">
+					{[
+						{ step: "1", titleId: "modal-ceicr-step1-title", title: "Review existing documentation", descId: "modal-ceicr-step1-desc", desc: "Check previous certificates and installation records" },
+						{ step: "2", titleId: "modal-ceicr-step2-title", title: "Carry out a visual inspection", descId: "modal-ceicr-step2-desc", desc: "Inspect distribution boards, wiring routes, and accessories" },
+						{ step: "3", titleId: "modal-ceicr-step3-title", title: "Perform electrical testing", descId: "modal-ceicr-step3-desc", desc: "Test insulation resistance, earth fault loop, RCD operation and more" },
+						{ step: "4", titleId: "modal-ceicr-step4-title", title: "Issue a detailed EICR report", descId: "modal-ceicr-step4-desc", desc: "With coded observations and clear recommendations" },
+						{ step: "5", titleId: "modal-ceicr-step5-title", title: "Discuss findings with you", descId: "modal-ceicr-step5-desc", desc: "Explain any remedial work needed and provide a quote if required" },
+					].map((item) => (
+						<div key={item.step} className="flex items-start gap-2">
+							<span className="flex items-center justify-center size-6 rounded-full bg-blue-600 text-white text-xs font-semibold shrink-0">{item.step}</span>
+							<div>
+								<E id={item.titleId} as="h4" className="font-semibold text-sm text-slate-900">{item.title}</E>
+								<E id={item.descId} as="p" className="text-sm text-slate-700">{item.desc}</E>
+							</div>
+						</div>
+					))}
+				</div>
+
+				<E id="modal-ceicr-h2-disruption" as="h2" className="text-2xl font-bold text-slate-900 mt-8">Minimising disruption to your business</E>
+				<E id="modal-ceicr-disruption-body" as="p" className="text-base text-slate-700" multiline>
+					We understand that downtime costs money. We work around your schedule — including evenings, weekends and out-of-hours — to minimise the impact on your operations. For larger premises, we can phase the testing across multiple visits.
+				</E>
+
+				<E id="modal-ceicr-h2-why" as="h2" className="text-2xl font-bold text-slate-900 mt-8">Why choose LT Electrical Services?</E>
+				<div className="grid md:grid-cols-2 gap-3">
+					{[
+						{ icon: Shield, color: "text-blue-600", titleId: "modal-ceicr-why1-title", title: "NAPIT registered electricians", descId: "modal-ceicr-why1-desc", desc: "Certified professionals you can trust" },
+						{ icon: CheckCircle2, color: "text-green-600", titleId: "modal-ceicr-why2-title", title: "2391 qualified for inspection & testing", descId: "modal-ceicr-why2-desc", desc: "Specialist qualifications for commercial work" },
+						{ icon: Users, color: "text-blue-600", titleId: "modal-ceicr-why3-title", title: "Trusted by councils and businesses", descId: "modal-ceicr-why3-desc", desc: "Including KFC, YMCA, and local authorities" },
+						{ icon: Clock, color: "text-orange-600", titleId: "modal-ceicr-why4-title", title: "Flexible scheduling", descId: "modal-ceicr-why4-desc", desc: "Out-of-hours and weekend testing available" },
+					].map((item) => (
+						<div key={item.titleId} className="flex items-start gap-2">
+							<item.icon className={`size-5 ${item.color} shrink-0 mt-0.5`} />
+							<div>
+								<E id={item.titleId} as="h4" className="font-semibold text-sm text-slate-900">{item.title}</E>
+								<E id={item.descId} as="p" className="text-xs text-slate-700">{item.desc}</E>
+							</div>
+						</div>
+					))}
+				</div>
+
+				<EditableColor id="modal-ceicr-cta-bg" defaultColor="#2563eb" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl p-6 mt-8">
+					<E id="modal-ceicr-cta-title" as="h3" className="text-xl font-bold mb-2">Book a commercial EICR</E>
+					<E id="modal-ceicr-cta-desc" as="p" className="text-sm mb-4" multiline>
+						Get in touch for commercial EICR and fixed wire testing across Spalding, Peterborough and surrounding areas.
+					</E>
+					<div className="flex flex-col sm:flex-row gap-3">
+						<EditableLink id="modal-ceicr-cta-phone" defaultHref="tel:01775710743" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 hover:bg-slate-100 px-4 py-2 rounded-lg font-semibold text-sm transition-colors">
+							<Phone className="size-4" />
+							<E id="modal-ceicr-cta-phone-text" as="span">Call: 01775 710743</E>
+						</EditableLink>
+						<EditableLink id="modal-ceicr-cta-email" defaultHref="mailto:admin@ltelectricalservices.co.uk" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/30 px-4 py-2 rounded-lg font-semibold text-sm transition-colors">
+							<Mail className="size-4" />
+							<E id="modal-ceicr-cta-email-text" as="span">Email Us</E>
 						</EditableLink>
 					</div>
 				</EditableColor>
@@ -618,6 +814,108 @@ function DefibrillatorArticleContent() {
 	);
 }
 
+function HeroBgColorPicker() {
+	const { contentEdits, handleContentSave } = useAdmin();
+	const [showPicker, setShowPicker] = useState(false);
+	const colorInputRef = useRef<HTMLInputElement>(null);
+	const currentColor = contentEdits[HERO_BG_COLOR_KEY] || DEFAULT_HERO_BG;
+	const [hexDraft, setHexDraft] = useState(currentColor);
+
+	useEffect(() => {
+		setHexDraft(contentEdits[HERO_BG_COLOR_KEY] || DEFAULT_HERO_BG);
+	}, [contentEdits]);
+
+	const applyColor = useCallback((color: string) => {
+		if (color !== DEFAULT_HERO_BG) {
+			handleContentSave(HERO_BG_COLOR_KEY, color);
+		} else {
+			handleContentSave(HERO_BG_COLOR_KEY, "");
+		}
+	}, [handleContentSave]);
+
+	const handleHexSubmit = useCallback(() => {
+		const hex = hexDraft.trim();
+		if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+			applyColor(hex);
+		} else if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+			const withHash = `#${hex}`;
+			setHexDraft(withHash);
+			applyColor(withHash);
+		}
+	}, [hexDraft, applyColor]);
+
+	return (
+		<div className="absolute bottom-3 left-3">
+			<button
+				type="button"
+				onClick={() => setShowPicker(!showPicker)}
+				className="bg-white/90 hover:bg-white text-slate-700 rounded-lg px-2 py-1.5 text-xs font-medium flex items-center gap-1.5 shadow-lg border border-slate-200 transition-colors"
+				title="Change background colour"
+			>
+				<Palette className="size-3.5" />
+				<span
+					className="size-4 rounded border border-slate-300"
+					style={{ backgroundColor: currentColor }}
+				/>
+				Colour
+			</button>
+			{showPicker && (
+				<div
+					className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-xl border border-slate-200 p-3 z-10 min-w-[200px]"
+					onClick={(e) => e.stopPropagation()}
+				>
+					<p className="text-[10px] font-medium text-slate-500 mb-2">Background Colour</p>
+					<div className="flex items-center gap-2 mb-2">
+						<input
+							ref={colorInputRef}
+							type="color"
+							value={currentColor}
+							onChange={(e) => {
+								setHexDraft(e.target.value);
+								applyColor(e.target.value);
+							}}
+							className="size-8 rounded border border-slate-300 cursor-pointer p-0"
+						/>
+						<input
+							type="text"
+							value={hexDraft}
+							onChange={(e) => setHexDraft(e.target.value)}
+							onBlur={handleHexSubmit}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									e.preventDefault();
+									handleHexSubmit();
+								}
+							}}
+							placeholder="#2563eb"
+							className="flex-1 bg-slate-50 text-slate-900 border border-slate-300 rounded px-2 py-1 outline-none text-xs font-mono focus:ring-1 focus:ring-blue-400 w-24"
+						/>
+					</div>
+					<div className="flex gap-1 flex-wrap mb-2">
+						{["#2563eb", "#1e40af", "#0f172a", "#0d9488", "#059669", "#7c3aed", "#dc2626", "#ea580c"].map((c) => (
+							<button
+								key={c}
+								type="button"
+								onClick={() => { setHexDraft(c); applyColor(c); }}
+								className={`size-6 rounded border transition-all ${currentColor === c ? "ring-2 ring-blue-500 ring-offset-1" : "border-slate-300 hover:scale-110"}`}
+								style={{ backgroundColor: c }}
+								title={c}
+							/>
+						))}
+					</div>
+					<button
+						type="button"
+						onClick={() => { setHexDraft(DEFAULT_HERO_BG); applyColor(DEFAULT_HERO_BG); }}
+						className="text-[10px] text-slate-500 hover:text-slate-700 transition-colors"
+					>
+						Reset to default
+					</button>
+				</div>
+			)}
+		</div>
+	);
+}
+
 function App() {
 	const { isAdmin, contentEdits, handleContentSave } = useAdmin();
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -759,7 +1057,10 @@ function App() {
 							</div>
 						</div>
 						<div className="relative">
-							<div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/3] bg-gradient-to-br from-blue-600 via-blue-700 to-slate-800">
+							<div
+								className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/3]"
+								style={{ backgroundColor: contentEdits[HERO_BG_COLOR_KEY] || DEFAULT_HERO_BG }}
+							>
 								{heroImage ? (
 									<img
 										src={heroImage}
@@ -813,7 +1114,7 @@ function App() {
 									</div>
 								</div>
 								{isAdmin && (
-									<div className="absolute top-3 right-3 flex gap-2">
+									<div className="absolute top-3 right-3 flex gap-2 flex-wrap justify-end">
 										<Button
 											size="sm"
 											className="bg-blue-600 hover:bg-blue-700 shadow-lg"
@@ -842,6 +1143,9 @@ function App() {
 											className="hidden"
 										/>
 									</div>
+								)}
+								{isAdmin && (
+									<HeroBgColorPicker />
 								)}
 							</div>
 							<div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-blue-500/20 blur-3xl rounded-full"></div>
@@ -937,15 +1241,25 @@ function App() {
 									<E id="svc-4-desc" as="span">Comprehensive electrical testing and certification to ensure your property meets safety standards.</E>
 								</CardDescription>
 							</CardHeader>
-							<CardContent>
+							<CardContent className="flex flex-col gap-1">
 								<Dialog>
 									<DialogTrigger asChild>
-										<Button variant="link" className="p-0 h-auto text-blue-600">
-											Learn more about EICRs <ExternalLink className="size-3 ml-1" />
+										<Button variant="link" className="p-0 h-auto text-blue-600 justify-start">
+											Learn more about domestic EICRs <ExternalLink className="size-3 ml-1" />
 										</Button>
 									</DialogTrigger>
 									<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
 										<EICRGuideContent />
+									</DialogContent>
+								</Dialog>
+								<Dialog>
+									<DialogTrigger asChild>
+										<Button variant="link" className="p-0 h-auto text-blue-600 justify-start">
+											Learn more about commercial EICRs <ExternalLink className="size-3 ml-1" />
+										</Button>
+									</DialogTrigger>
+									<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+										<CommercialEICRGuideContent />
 									</DialogContent>
 								</Dialog>
 							</CardContent>
@@ -1345,10 +1659,20 @@ function App() {
 								<li>
 									<Dialog>
 										<DialogTrigger className="hover:text-white transition-colors cursor-pointer">
-											EICR & Testing →
+											Domestic EICRs →
 										</DialogTrigger>
 										<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
 											<EICRGuideContent />
+										</DialogContent>
+									</Dialog>
+								</li>
+								<li>
+									<Dialog>
+										<DialogTrigger className="hover:text-white transition-colors cursor-pointer">
+											Commercial EICRs →
+										</DialogTrigger>
+										<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+											<CommercialEICRGuideContent />
 										</DialogContent>
 									</Dialog>
 								</li>

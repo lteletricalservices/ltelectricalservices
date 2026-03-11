@@ -1021,20 +1021,24 @@ function App() {
 		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
 			<EditableColor id="header-bg-color" defaultColor="#0f172a" isAdmin={isAdmin} contentEdits={contentEdits} onSave={handleContentSave} className="bg-slate-900 text-white py-4 sticky top-0 z-50 shadow-md">
 				<div className="container mx-auto px-4 flex justify-between items-center">
-					<div className="flex items-center gap-2">
-						<EditableImage
-							id="header-logo-image"
-							alt="LT Electrical Services logo"
-							isAdmin={isAdmin}
-							contentEdits={contentEdits}
-							onSave={handleContentSave}
-							optional
-							label="Logo"
-							className="h-8 w-auto object-contain"
-							wrapperClassName="shrink-0"
-						/>
-						<E id="header-name" as="span" className="text-xl font-bold">LT Electrical Services</E>
-					</div>
+					<div className="flex items-center gap-2 shrink-0">
+	<EditableImage
+		id="header-logo-image"
+		alt="LT Electrical Services logo"
+		isAdmin={isAdmin}
+		contentEdits={contentEdits}
+		onSave={handleContentSave}
+		optional
+		label="Site logo"
+		className="h-10 md:h-12 lg:h-14 w-auto object-contain max-w-[220px]"
+		wrapperClassName="shrink-0"
+	/>
+	{!contentEdits["header-logo-image"] && (
+		<E id="header-name" as="span" className="text-xl font-bold">
+			LT Electrical Services
+		</E>
+	)}
+</div>
 					<div className="flex items-center gap-6">
 						<Link to="/news" className="hidden sm:inline hover:text-blue-400 transition-colors font-medium">
 							News

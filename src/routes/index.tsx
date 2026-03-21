@@ -2538,14 +2538,14 @@ function App() {
 									<EIcon id="footer-email-icon" defaultIcon="mail" className="size-4" />
 									<EditableLink
 										id="footer-email-link"
-										defaultHref="mailto:info@ltelectrical.co.uk"
+										defaultHref="mailto:admin@ltelectricalservices.co.uk"
 										isAdmin={isAdmin}
 										contentEdits={contentEdits}
 										onSave={handleContentSave}
 										className="hover:text-white transition-colors"
 									>
 										<E id="footer-email-text" as="span">
-											info@ltelectrical.co.uk
+											admin@ltelectricalservices.co.uk
 										</E>
 									</EditableLink>
 								</div>

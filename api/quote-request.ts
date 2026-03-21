@@ -5,12 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-const QUOTE_TO_EMAIL = process.env.QUOTE_TO_EMAIL ?? "admin@ltelectricalservices.co.uk";
-
-const supabase =
-	SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-		? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-		: null;
+const QUOTE_TO_EMAIL = process.env.QUOTE_TO_EMAIL ?? "PaulTwaddle@hotmail.com";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
 	res.setHeader("Access-Control-Allow-Origin", "*");
@@ -25,41 +20,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		return res.status(405).json({ error: "Method not allowed" });
 	}
 
-	if (!RESEND_API_KEY) {
-		return res.status(500).json({ error: "Email service not configured" });
-	}
-
 	const { name, email, phone, postcode, serviceType, message } = req.body ?? {};
 
 	if (!name || !email || !phone || !serviceType || !message) {
 		return res.status(400).json({ error: "Missing required fields" });
 	}
 
+	console.log("QUOTE REQUEST START", {
+		hasResendKey: !!RESEND_API_KEY,
+		hasSupabaseUrl: !!SUPABASE_URL,
+		hasServiceRoleKey: !!SUPABASE_SERVICE_ROLE_KEY,
+		quoteToEmail: QUOTE_TO_EMAIL,
+		body: { name, email, phone, postcode, serviceType, message },
+	});
+
+	if (!RESEND_API_KEY) {
+		return res.status(500).json({ error: "Missing RESEND_API_KEY" });
+	}
+
+	if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+		return res.status(500).json({ error: "Missing Supabase server env vars" });
+	}
+
+	const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 	const resend = new Resend(RESEND_API_KEY);
 
 	try {
-		if (supabase) {
-			const { error: dbError } = await supabase.from("contact_quotes").insert([
-				{
-					name,
-					email,
-					phone,
-					postcode: postcode || "",
-					service_type: serviceType,
-					message,
-				},
-			]);
+		const insertPayload = {
+			name,
+			email,
+			phone,
+			postcode: postcode || "",
+			service_type: serviceType,
+			message,
+		};
 
-			if (dbError) {
-				console.error("Supabase insert error:", dbError);
-			} else {
-				console.log("Quote saved to Supabase");
-			}
-		} else {
-			console.warn("Supabase not configured - skipping DB save");
+		console.log("SUPABASE INSERT PAYLOAD", insertPayload);
+
+		const { data: savedQuote, error: dbError } = await supabase
+			.from("contact_quotes")
+			.insert([insertPayload])
+			.select("id, created_at")
+			.single();
+
+		if (dbError) {
+			console.error("SUPABASE INSERT ERROR", dbError);
+			return res.status(500).json({
+				error: "Supabase insert failed",
+				details: dbError.message,
+			});
 		}
 
-		const result = await resend.emails.send({
+		console.log("SUPABASE INSERT SUCCESS", savedQuote);
+
+		const emailResult = await resend.emails.send({
 			from: "LT Electrical Website <onboarding@resend.dev>",
 			to: QUOTE_TO_EMAIL,
 			replyTo: email,
@@ -78,11 +92,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 			].join("\n"),
 		});
 
-		console.log("Quote email sent:", result);
+		console.log("RESEND SUCCESS", emailResult);
 
-		return res.status(200).json({ success: true });
+		return res.status(200).json({
+			success: true,
+			savedQuote,
+			emailSentTo: QUOTE_TO_EMAIL,
+			emailResult,
+		});
 	} catch (err) {
-		console.error("Quote request error:", err);
-		return res.status(500).json({ error: "Failed to process request" });
+		console.error("QUOTE REQUEST FATAL ERROR", err);
+		return res.status(500).json({
+			error: "Failed to process quote request",
+			details: err instanceof Error ? err.message : String(err),
+		});
 	}
 }

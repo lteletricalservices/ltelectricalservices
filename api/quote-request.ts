@@ -5,7 +5,9 @@ import { createClient } from "@supabase/supabase-js";
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-const QUOTE_TO_EMAIL = process.env.QUOTE_TO_EMAIL ?? "PaulTwaddle@hotmail.com";
+const QUOTE_TO_EMAIL =
+	process.env.QUOTE_TO_EMAIL ??
+	"paultwaddle@gmail.com,admin@ltelectricalservices.co.uk";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
 	res.setHeader("Access-Control-Allow-Origin", "*");
@@ -75,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 		const emailResult = await resend.emails.send({
 			from: "LT Electrical Website <onboarding@resend.dev>",
-			to: QUOTE_TO_EMAIL,
+			to: QUOTE_TO_EMAIL.split(",").map(email => email.trim()),
 			replyTo: email,
 			subject: `New Quote Request — ${name}`,
 			text: [

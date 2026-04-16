@@ -74,8 +74,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		console.log("SUPABASE INSERT SUCCESS", savedQuote);
 
 		const emailResult = await resend.emails.send({
-			from: "LT Electrical Services <admin@ltelectricalservices.co.uk>",
-			to: QUOTE_TO_EMAIL,
+			from: "LT Electrical Services <onboarding@resend.dev>",
+			to: QUOTE_TO_EMAIL.split(",")
 			replyTo: email,
 			subject: `New Quote Request — ${name}`,
 			text: [

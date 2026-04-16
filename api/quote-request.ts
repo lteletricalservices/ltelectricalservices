@@ -75,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 		const emailResult = await resend.emails.send({
 			from: "LT Electrical Services <onboarding@resend.dev>",
-			to: QUOTE_TO_EMAIL.split(",")
+			to: QUOTE_TO_EMAIL.split(","),
 			replyTo: email,
 			subject: `New Quote Request — ${name}`,
 			text: [
